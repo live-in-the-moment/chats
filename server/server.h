@@ -16,7 +16,8 @@
 #include<time.h>
 #include<signal.h>
 #include<arpa/inet.h>
-#include"crc.h"
+
+#include"../head/crc.h"
 
 // 功能指令
 enum {

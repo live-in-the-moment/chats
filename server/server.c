@@ -107,7 +107,7 @@ int FindId(sqlite3 *ppdb, Message *data)
         {
             if (Index % column == 0)
             {
-                if (strcmp(result[Index], data->header.id) == 0)
+                if (strcmp(result[Index], data->header.sid) == 0)
                 {
                     flag = 1;
                     break;
@@ -155,7 +155,7 @@ void InsertData(sqlite3 *ppdb, Message *data)
     char *errmsg = NULL;
 
     sprintf(sql, "insert into mytable(id,passwd) values('%s','%s');",
-            data->header.id,  data->body.login_request.password);
+            data->header.sid,  data->body.login_request.password);
 
     if (SQLITE_OK != sqlite3_exec(ppdb, sql, NULL, NULL, &errmsg))
     {
@@ -205,7 +205,7 @@ int FindSecret(sqlite3 *ppdb, Message *data)
         {
             if (Index % column == 0)
             {
-                int ret1 = strcmp(result[Index], data->header.id);
+                int ret1 = strcmp(result[Index], data->header.sid);
     
                 if (ret1 == 0)
                 {
@@ -232,7 +232,7 @@ int FindSecret(sqlite3 *ppdb, Message *data)
 void UpdateData(sqlite3 *ppdb, Message *data)
 {
     char sq1[128] = {0};
-    sprintf(sq1, "update mytable set passwd='%s' where id= '%s'  ;", data->body.login_request.password, data->header.id);
+    sprintf(sq1, "update mytable set passwd='%s' where id= '%s'  ;", data->body.login_request.password, data->header.sid);
     char **result;
     int row, column;
     int flag = 0;
@@ -262,7 +262,7 @@ int RepeatLogin(thread_node *node, Message *data)
         return 0;
     }
 
-    while (p != NULL && strcmp(p->id, data->header.id) != 0)
+    while (p != NULL && strcmp(p->id, data->header.sid) != 0)
     {
         p = p->next;
     }
@@ -307,15 +307,15 @@ void Login(thread_node *node, Message *data)
         if (ret == -1)
         {
             char arr[128] = {"登录成功"};
-            send(data->header.sender, arr, strlen(arr), 0);
+            send(data->header.cfd, arr, strlen(arr), 0);
 
             // 创建新的节点
             CreateNode(&new_node);
 
             // 把该账户的id复制的链表里
-            strcpy(new_node->id, data->header.id);
+            strcpy(new_node->id, data->header.sid);
 
-            new_node->cfd = data->header.sender;
+            new_node->cfd = data->header.cfd;
             new_node->forbid_flag = 0;
 
             // 头插法插入新的数据
@@ -352,7 +352,7 @@ int VerifyIdPassword(sqlite3 *ppdb, Message *data)
             if (Index % column == 0)
             {
 
-                int ret1 = strcmp(result[Index], data->header.id);
+                int ret1 = strcmp(result[Index], data->header.sid);
                 int ret2 = strcmp(result[Index + 2], data->body.login_request.password);
 
                 if (ret1 == 0 && ret2 == 0)
@@ -493,7 +493,7 @@ void FileRecv(thread_node *node, Message *data)
     p = node->head->next;
 
     // 寻找在线用户链表中的cfd与私聊的cfd是否一致
-    while (p != NULL && strcmp(p->id, data->header.id) != 0)
+    while (p != NULL && strcmp(p->id, data->header.sid) != 0)
     {
         // printf("****%s\n",p->id);
         p = p->next;
@@ -556,9 +556,9 @@ void GroupChat(sqlite3 *ppdb, OnlineLinkList *head, Message *data)
     int len;
 
     char chat[2048] = {0};
-    strcpy(chat, data->header.id);
+    strcpy(chat, data->header.sid);
     strcat(chat, "(");
-    strcat(chat, data->header.timestamp);
+    strcat(chat, data->header.msg_time);
     strcat(chat, ")");
     strcat(chat, ":");
     strcat(chat, data->body.chat_message.content);
@@ -586,7 +586,7 @@ void PrivateChat(thread_node *node, Message *data)
     length = strlen(data->body.chat_message.content);
     int len;
     // 寻找在线用户链表中的cfd与私聊中的cfd是否一致
-    while (p != NULL && strcmp(p->id, data->header.id) != 0)
+    while (p != NULL && strcmp(p->id, data->header.sid) != 0)
     {
         p = p->next;
     }
@@ -600,9 +600,9 @@ void PrivateChat(thread_node *node, Message *data)
     {
 
         char chat[2048] = {0};
-        strcpy(chat, data->header.id);
+        strcpy(chat, data->header.sid);
         strcat(chat, "(");
-        strcat(chat, data->header.timestamp);
+        strcat(chat, data->header.msg_time);
         strcat(chat, ")");
         strcat(chat, ":");
         strcat(chat, data->body.chat_message.content);

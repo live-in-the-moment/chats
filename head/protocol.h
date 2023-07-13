@@ -16,11 +16,11 @@ typedef struct Message{
 		uint8_t T; // 
 		uint32_t length; //数据长度
 		uint32_t crc32; //CRC校验       
-        int sid[32];  
+        char sid[32];  
         char sender[32];  // 发送者用户名  
         int rid[32];
         char receiver[32];  // 接收者用户名
-        int cfd[32];
+        int cfd;
         char message_type[32];  // 消息类型
         char msg_time[32];  // 时间戳格式为YYYY-MM-DD HH:MM:SS
     } header;
