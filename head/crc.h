@@ -1,3 +1,5 @@
+#ifndef CRC_H
+#define CRC_H
 #include <stdio.h>
 #include <stdint.h>
 #include "protocol.h"
@@ -50,3 +52,5 @@ uint32_t calculate_crc32(Message *message) {
     return crc;
 
 }
+
+#endif
