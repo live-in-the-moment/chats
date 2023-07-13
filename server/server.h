@@ -16,8 +16,9 @@
 #include<time.h>
 #include<signal.h>
 #include<arpa/inet.h>
+#include <stdbool.h>
+#include "../head/protocol.h"
 
-#include"../head/crc.h"
 
 // 功能指令
 enum {
@@ -48,6 +49,9 @@ typedef struct thread_node
     OnlineLinkList *head;
     sqlite3 *ppdb;
 }thread_node;
+
+
+
 
 // 保存信息的结构体
 // typedef struct Message{

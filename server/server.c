@@ -1,5 +1,6 @@
 #include "server.h"
 
+
 // 创建一个空链表(保存在线用户)
 void CreateLink(OnlineLinkList **head)
 {
@@ -386,10 +387,10 @@ void MsgSendRecv(thread_node *node)
 
     ret = recv(node->cfd, &buf, sizeof(buf), 0);
     memcpy(&buf,&RecvInfo,sizeof(buf));
-    if (calculate_crc32(&RecvInfo) != RecvInfo.header.crc32)
-    {
-        send(node->cfd, "数据有误", strlen("数据有误"), 0);
-    }
+    // if (calculate_crc32(&RecvInfo) != RecvInfo.header.crc32)
+    // {
+    //     send(node->cfd, "数据有误", strlen("数据有误"), 0);
+    // }
     
 
     if (ret == 0)
