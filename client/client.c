@@ -1,5 +1,5 @@
 #include "client.h"
-#include "head/crc.h"
+#include "../head/crc.h"
 
 // 时间
 time_t times;
@@ -16,7 +16,7 @@ void Close(int signum)
 int send_data(Message *message){
     char buf[1024];
     char res[1024];
-    message->header.crc32 = calculate_crc32(&message);
+    message->header.crc32 = calculate_crc32(message);
     memcpy(&message, &buf, sizeof(message));
     send(sockfd, &message, sizeof(message), 0);
     return recv(sockfd, &res, sizeof(res), 0);
@@ -29,7 +29,7 @@ int retry(Message *message){
         if (send_data(message) != -1){
             return 0;
         }
-        printf("发送失败，正在进行第%d次重发", i+1);
+        printf("发送失败，正在进行第%ld次重发", i+1);
     }
     return -1;
 }
@@ -58,7 +58,7 @@ void *read_thread(void *arg)
 
     struct Message node;
     node = *((struct Message *)arg);
-    sockfd = node.header.receiver;
+    sockfd = *node.header.receiver;
 
     while (1)
     {
@@ -135,7 +135,7 @@ void *write_thread(void *arg)
         // 注册
         case 2:
             printf("id:");
-            scanf("%s", message.header.sid);
+            scanf("%ls", message.header.sid);
 
             // printf("昵称:\n");
             // scanf("%s", message);
@@ -165,7 +165,7 @@ void *write_thread(void *arg)
             scanf("%s", message.body.chat_message.content);
             strcpy(message.header.message_type, "PRIVATE");
             printf("请输入对方的id:\n");
-            scanf("%s", message.header.rid);
+            scanf("%ls", message.header.rid);
             // 获取当前时间
             time(&times);
             // 将时间转换为本地时间
@@ -280,7 +280,7 @@ void file_from(int sockfd)
     strcpy(msg_text.header.message_type, "FILE");
 
     printf("请输入传输对象的id:\n");
-    scanf("%s", msg_text.header.rid);
+    scanf("%ls", msg_text.header.rid);
 
     printf("请输入文件路径\n");
     scanf("%s", filename_path);
