@@ -15,11 +15,11 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <time.h>
-#include<signal.h>
+#include <signal.h>
 #include <stdbool.h>
 
 // 客户端套接字 socket
-int sockfd;
+// int sockfd;
 
 // 功能指令
 enum {
@@ -67,7 +67,7 @@ typedef struct Message{
         } online_list;
         
         struct {  // 私聊响应消息
-            bool accepted;  // 是否同意私聊的状态
+            int accepted;  // 是否同意私聊的状态
         } private_chat_response;
         
         struct {  // 聊天消息

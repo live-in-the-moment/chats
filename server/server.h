@@ -84,7 +84,7 @@ typedef struct Message{
         } online_list;
         
         struct {  // 私聊响应消息
-            bool accepted;  // 是否同意私聊的状态
+            int accepted;  // 是否同意私聊的状态
         } private_chat_response;
         
         struct {  // 聊天消息

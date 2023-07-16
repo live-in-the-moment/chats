@@ -1,14 +1,70 @@
 #include "client.h"
 
+
 // 时间
 time_t times;
 struct tm *local_time;
 char msg_time[1024];
+int sockfd;
 
 // 修改退出聊天软件的方式
 void Close(int signum)
 {
     printf("请正确退出\n");
+}
+
+void private_chats(char* sendline, Message m){
+    Message message;
+    // memset(&message, 0, sizeof(message));
+    strcpy(message.header.sid, m.header.sid);
+    strcpy(message.header.rid, m.header.rid);
+    strcpy(message.header.msg_type, "PRIVATE");
+    // message.body.private_chat_response.accepted = 1;
+    // while (1)
+    // {
+    //     char res[16];
+    //     if (recv(sockfd, res, sizeof(res), 0))
+    //     {
+    //         /* code */
+    //     }
+        
+    // }
+    // char res[16];
+    // recv(sockfd, res, sizeof(res), 0);
+    // if (strcasecmp(res, "Y") != 0)
+    // {
+    //     printf("对方拒绝了你的私聊申请！");
+    //     return;
+    // }
+    
+    
+    while (1)
+    {
+        printf("请输入消息:\n");
+        memset(sendline, 0, sizeof(sendline));
+        // fgets(sendline, 128, stdin);
+        scanf("%s", sendline);
+
+        if (strncmp(sendline, "quit", 4) == 0)
+        {
+            printf("退出私聊");
+            break;
+        }
+        
+        // 获取当前时间
+        time(&times);
+        // 将时间转换为本地时间
+        local_time = localtime(&times);
+        // 格式化时间字符串
+        strftime(msg_time, sizeof(msg_time), "%Y-%m-%d %H:%M:%S", local_time);
+        strcpy(message.header.sid, message.header.sid);
+        strcpy(message.body.chat_message.content, sendline);
+        strcpy(message.header.msg_time, msg_time);
+        // message.body.private_chat_response.accepted = false;
+        printf("%d, %s, %s\n", message.body.private_chat_response.accepted, message.body.chat_message.content, sendline);
+        int s = send(sockfd, &message, sizeof(message), 0);
+        printf("%d\n%ld\n", s, sizeof(message));
+    }
 }
 
 //  序列化并发送数据
@@ -90,6 +146,17 @@ void *read_thread(void *arg)
             file_recv(buffer);
             printf("接收文件成功\n");
         }
+        else if (strstr(receive, "请求与你私聊") != NULL)
+        {
+            char acc[8];
+            printf("%s 请求私聊，是否同意【Y/n】\n", strtok(receive, ","));
+            // scanf("%s", acc);
+            // if (strcasecmp(acc, "Y") == 0)
+            // {
+            //     send(sockfd, &acc, sizeof(acc), 0);
+            // }
+            
+        }
         else
         {
             printf("%s\n", receive);
@@ -152,26 +219,15 @@ void *write_thread(void *arg)
             break;
         // 私聊
         case 3:
-            while (1)
-            {
-                printf("请输入消息:\n");
-                memset(sendline, 0, sizeof(sendline));
-                fgets(sendline, 128, stdin);
-                strcpy(message.header.msg_type, "PRIVATE");
-                
-                printf("请输入对方的Id:\n");
-                scanf("%s", message.header.sid);
-                // 获取当前时间
-                time(&times);
-                // 将时间转换为本地时间
-                local_time = localtime(&times);
-                // 格式化时间字符串
-                strftime(msg_time, sizeof(msg_time), "%Y-%m-%d %H:%M:%S", local_time);
-                strcpy(message.header.sid, message.header.sid);
-                strcpy(message.body.chat_message.content, sendline);
-                strcpy(message.header.msg_time, msg_time);
-                send(sockfd, &message, sizeof(message), 0);
-            }
+            strcpy(message.header.msg_type, "PRIVATE");
+            printf("请输入对方的Id:\n");
+            scanf("%s", message.header.rid);
+
+            message.body.private_chat_response.accepted = 0;
+            send(sockfd, &message, sizeof(message), 0);
+            printf("%d\n", message.body.private_chat_response.accepted);
+
+            private_chats(sendline, message);
             break;
 
         // 群聊

@@ -440,6 +440,11 @@ void MsgSendRecv(thread_node *node)
                 char arr[128] = {"你未在线，不能私发消息，请先登录"};
                 send(node->cfd, arr, strlen(arr), 0);
             }
+            // else if (RecvInfo.body.private_chat_response.accepted)
+            // {
+            //     char arr[128] = {"发送私聊请求成功"};
+            //     send(node->cfd, arr, strlen(arr), 0);
+            // }
             else
             {
                 PrivateChat(node, &RecvInfo);
@@ -582,7 +587,7 @@ void PrivateChat(thread_node *node, Message *data)
     length = strlen(data->body.chat_message.content);
     int len;
     // 寻找在线用户链表中的cfd与私聊中的cfd是否一致
-    while (p != NULL && strcmp(p->id, data->header.sid) != 0)
+    while (p != NULL && strcmp(p->id, data->header.rid) != 0)
     {
         p = p->next;
     }
@@ -592,9 +597,21 @@ void PrivateChat(thread_node *node, Message *data)
         char arr[100] = {"该用户不在线"};
         send(node->cfd, arr, strlen(arr), 0);
     }
+    else if (!data->body.private_chat_response.accepted)
+    {
+        char arr[100] = {0};
+        char acc[8];
+        sprintf(arr, "%d,请求与你私聊", node->cfd);
+        send(p->cfd, arr, strlen(arr), 0);
+        // recv(p->cfd, acc, strlen(acc), 0);
+
+        // send(node->cfd, acc, strlen(acc), 0);
+
+        
+    }
     else
     {
-
+        
         char chat[2048] = {0};
         strcpy(chat, data->header.sid);
         strcat(chat, "(");
