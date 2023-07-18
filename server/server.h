@@ -27,6 +27,7 @@ enum {
     PRIVATE,    //私聊
     GROUP,  //群聊
     LOOKCHATRECORD, //查看聊天记录
+    LOOKPMCHATRECORD, //查询私聊记录
     // FILE,   // 传输文件
 };
 
@@ -70,9 +71,10 @@ typedef struct Message{
             char password[32];  // 客户端密码
         } login_request;
         
-        struct {  // 异常响应消息
-            bool status;  // 是否成功的信息
-        } login_response;
+        struct {  // 响应消息 
+            int res_type;  // 响应类型
+            char logs[64]; //日志
+        } response;
         
         struct {  // 文件传输消息
             char file_path[1024];  // 文件路径
@@ -80,11 +82,11 @@ typedef struct Message{
         
         struct {  // 在线列表消息
             int online_count;  // 当前在线客户端数量
-            char online_clients[128];  // 各个客户端的用户名
+            char online_clients[256];  // 各个客户端的用户名
         } online_list;
         
         struct {  // 私聊响应消息
-            bool accepted;  // 是否同意私聊的状态
+            int accepted;  // 是否同意私聊的状态
         } private_chat_response;
         
         struct {  // 聊天消息
@@ -141,10 +143,16 @@ int RepeatLogin(thread_node *node , Message *data);
 
 //创建第二张表用于保存聊天记录
 void CreatTable2(sqlite3 *ppdb);
+// 创建第三张表用于保存私聊的记录
+void CreatTable3(sqlite3 *ppdb);
 //向第二张表中插入聊天记录
 void InsertChatData(sqlite3 *ppdb , char *chat);
+//向第三张表中插入聊天记录
+void InsertPmChatData(sqlite3 *ppdb , char *chat, char *sid);
 //遍历聊天记录
 void  PrintChatRecord(sqlite3 *ppdb , thread_node *node);
+// 遍历私聊天记录
+void PrintPmChatRecord(sqlite3 *ppdb, thread_node *node, char *sid);
 // 文件处理
 void FileRecv(thread_node *node,Message *data);
 

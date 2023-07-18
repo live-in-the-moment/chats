@@ -15,11 +15,11 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <time.h>
-#include<signal.h>
+#include <signal.h>
 #include <stdbool.h>
 
 // 客户端套接字 socket
-int sockfd;
+// int sockfd;
 
 // 功能指令
 enum {
@@ -30,6 +30,7 @@ enum {
     PRIVATE,    //私聊
     GROUP,  //群聊
     LOOKCHATRECORD, //查看聊天记录
+    LOOKPMCHATRECORD, //查询私聊记录
     // FILE,   // 传输文件
 };
 
@@ -53,9 +54,10 @@ typedef struct Message{
             char password[32];  // 客户端密码
         } login_request;
         
-        struct {  // 异常响应消息
-            bool status;  // 是否成功的信息
-        } login_response;
+        struct {  // 响应消息
+            int res_type;  // 响应类型
+            char logs[64]; //日志
+        } response;
         
         struct {  // 文件传输消息
             char file_path[1024];  // 文件路径
@@ -67,7 +69,7 @@ typedef struct Message{
         } online_list;
         
         struct {  // 私聊响应消息
-            bool accepted;  // 是否同意私聊的状态
+            int accepted;  // 是否同意私聊的状态
         } private_chat_response;
         
         struct {  // 聊天消息
