@@ -135,8 +135,10 @@ void Register(thread_node *node, Message *data)
     // 注册前查找是否被注册
     if (-1 == FindId(node->ppdb, data))
     {
-        char arr[128] = {"账号已经存在,请重新注册"};
-        send(data->header.cfd, arr, strlen(arr), 0);
+        Message register_res;
+        register_res.body.response.res_type = 0;
+        strcpy(register_res.body.response.logs, "账号已经存在,请重新注册");
+        send(data->header.cfd, &register_res, sizeof(register_res), 0);
         return;
     }
     else
@@ -163,8 +165,10 @@ void InsertData(sqlite3 *ppdb, Message *data)
         exit(-1);
     }
 
-    char arr[100] = {"账号注册成功"};
-    send(data->header.cfd, arr, strlen(arr), 0);
+    Message register_res;
+    register_res.body.response.res_type = 0;
+    strcpy(register_res.body.response.logs, "账号注册成功");
+    send(data->header.cfd, &register_res, sizeof(register_res), 0);
 }
 
 // 创建表(用于保存注册用户的信息)
@@ -241,8 +245,13 @@ void UpdateData(sqlite3 *ppdb, Message *data)
         exit(-1);
     }
 
-    char arr[100] = {"密码更改成功"};
-    send(data->header.cfd, arr, strlen(arr), 0);
+    Message res;
+    res.body.response.res_type = 0;
+    strcpy(res.body.response.logs, "密码更改成功");
+    send(data->header.cfd, &res, sizeof(res), 0);
+
+    // char res[100] = {"密码更改成功"};
+    // send(data->header.cfd, res, strlen(res), 0);
 }
 
 // 检查账号是否重复登录
@@ -281,8 +290,13 @@ void Login(thread_node *node, Message *data)
 {
     if (-1 == RepeatLogin(node, data))
     {
-        char arr[128] = {"您已经在线，无需重复登录"};
-        send(node->cfd, arr, strlen(arr), 0);
+        Message res;
+        res.body.response.res_type = 0;
+        strcpy(res.body.response.logs, "您已经在线，无需重复登录");
+        send(node->cfd, &res, sizeof(res), 0);
+
+        // char res[128] = {"您已经在线，无需重复登录"};
+        // send(node->cfd, res, strlen(res), 0);
         return;
     }
 
@@ -293,8 +307,13 @@ void Login(thread_node *node, Message *data)
 
     if (-1 != FindId(node->ppdb, data))
     {
-        char arr[128] = {"该账号不存在，请重新登录"};
-        send(data->header.cfd, arr, strlen(arr), 0);
+        Message res;
+        res.body.response.res_type = 0;
+        strcpy(res.body.response.logs, "该账号不存在，请重新登录");
+        send(data->header.cfd, &res, sizeof(res), 0);
+
+        // char res[128] = {"该账号不存在，请重新登录"};
+        // send(data->header.cfd, res, strlen(res), 0);
         return;
     }
     else
@@ -303,8 +322,13 @@ void Login(thread_node *node, Message *data)
         int ret = VerifyIdPassword(node->ppdb, data);
         if (ret == -1)
         {
-            char arr[128] = {"登录成功"};
-            send(data->header.cfd, arr, strlen(arr), 0);
+            Message res;
+            res.body.response.res_type = 0;
+            strcpy(res.body.response.logs, "登录成功");
+            send(data->header.cfd, &res, sizeof(res), 0);
+
+            // char res[128] = {"登录成功"};
+            // send(data->header.cfd, res, strlen(res), 0);
 
             // 创建新的节点
             CreateNode(&new_node);
@@ -320,8 +344,13 @@ void Login(thread_node *node, Message *data)
         }
         else
         {
-            char arr[128] = {"账号或密码错误"};
-            send(data->header.cfd, arr, strlen(arr), 0);
+            Message res;
+            res.body.response.res_type = 0;
+            strcpy(res.body.response.logs, "账号或密码错误");
+            send(data->header.cfd, &res, sizeof(res), 0);
+
+            // char res[128] = {"账号或密码错误"};
+            // send(data->header.cfd, res, strlen(res), 0);
         }
     }
 }
@@ -411,8 +440,13 @@ void MsgSendRecv(thread_node *node)
 
             if (-1 == InspectOwnOnline(node))
             {
-                char arr[128] = {"你未在线，不能查看在线用户，请先登录"};
-                send(node->cfd, arr, strlen(arr), 0);
+                Message res;
+                res.body.response.res_type = 0;
+                strcpy(res.body.response.logs, "你未在线，不能查看在线用户，请先登录");
+                send(node->cfd, &res, sizeof(res), 0);
+
+                // char res[128] = {"你未在线，不能查看在线用户，请先登录"};
+                // send(node->cfd, res, strlen(res), 0);
             }
             else
             {
@@ -424,8 +458,13 @@ void MsgSendRecv(thread_node *node)
         {
             if (-1 == InspectOwnOnline(node))
             {
-                char arr[128] = {"你未在线，不能群发消息，请先登录"};
-                send(node->cfd, arr, strlen(arr), 0);
+                Message res;
+                res.body.response.res_type = 0;
+                strcpy(res.body.response.logs, "你未在线，不能群发消息，请先登录");
+                send(node->cfd, &res, sizeof(res), 0);
+
+                // char res[128] = {"你未在线，不能群发消息，请先登录"};
+                // send(node->cfd, res, strlen(res), 0);
             }
             else
             {
@@ -437,13 +476,18 @@ void MsgSendRecv(thread_node *node)
         {
             if (-1 == InspectOwnOnline(node))
             {
-                char arr[128] = {"你未在线，不能私发消息，请先登录"};
-                send(node->cfd, arr, strlen(arr), 0);
+                Message res;
+                res.body.response.res_type = 0;
+                strcpy(res.body.response.logs, "你未在线，不能私发消息，请先登录");
+                send(node->cfd, &res, sizeof(res), 0);
+
+                // char res[128] = {"你未在线，不能私发消息，请先登录"};
+                // send(node->cfd, res, strlen(res), 0);
             }
             // else if (RecvInfo.body.private_chat_response.accepted)
             // {
-            //     char arr[128] = {"发送私聊请求成功"};
-            //     send(node->cfd, arr, strlen(arr), 0);
+            //     char res[128] = {"发送私聊请求成功"};
+            //     send(node->cfd, res, strlen(res), 0);
             // }
             else
             {
@@ -457,8 +501,13 @@ void MsgSendRecv(thread_node *node)
 
             if (-1 == InspectOwnOnline(node))
             {
-                char arr[128] = {"你未在线，不能查看聊天记录，请先登录"};
-                send(node->cfd, arr, strlen(arr), 0);
+                Message res;
+                res.body.response.res_type = 0;
+                strcpy(res.body.response.logs, "你未在线，不能查看聊天记录，请先登录");
+                send(node->cfd, &res, sizeof(res), 0);
+
+                // char res[128] = {"你未在线，不能查看聊天记录，请先登录"};
+                // send(node->cfd, res, strlen(res), 0);
             }
             else
                 PrintChatRecord(node->ppdb, node);
@@ -469,8 +518,13 @@ void MsgSendRecv(thread_node *node)
 
             if (-1 == InspectOwnOnline(node))
             {
-                char arr[128] = {"你未在线，不能传输文件，请先登录"};
-                send(node->cfd, arr, strlen(arr), 0);
+                Message res;
+                res.body.response.res_type = 0;
+                strcpy(res.body.response.logs, "你未在线，不能传输文件，请先登录");
+                send(node->cfd, &res, sizeof(res), 0);
+
+                // char res[128] = {"你未在线，不能传输文件，请先登录"};
+                // send(node->cfd, res, strlen(res), 0);
             }
             else
                 FileRecv(node, &RecvInfo);
@@ -482,8 +536,13 @@ void FileRecv(thread_node *node, Message *data)
 {
     if (-1 == InspectOwnOnline(node))
     {
-        char arr[100] = {"你未在线，不能发文件"};
-        send(node->cfd, arr, strlen(arr), 0);
+        Message res;
+        res.body.response.res_type = 0;
+        strcpy(res.body.response.logs, "你未在线，不能发文件");
+        send(node->cfd, &res, sizeof(res), 0);
+
+        // char res[100] = {"你未在线，不能发文件"};
+        // send(node->cfd, res, strlen(res), 0);
         return;
     }
 
@@ -503,9 +562,14 @@ void FileRecv(thread_node *node, Message *data)
     // 判断是否在线
     if (p == NULL)
     {
+        Message res;
+        res.body.response.res_type = 0;
+        strcpy(res.body.response.logs, "该用户不在线");
+        send(node->cfd, &res, sizeof(res), 0);
+
         // printf("client is not online!\n");
-        char arr[100] = {"该用户不在线"};
-        send(node->cfd, arr, strlen(arr), 0);
+        // char res[100] = {"该用户不在线"};
+        // send(node->cfd, res, strlen(res), 0);
     }
     else
     {
@@ -516,6 +580,7 @@ void FileRecv(thread_node *node, Message *data)
         usleep(30);
         // 向客户端发送文件
         send(p->cfd, data->body.file_transfer.file_path, strlen(data->body.file_transfer.file_path), 0);
+
     }
 }
 
@@ -594,15 +659,38 @@ void PrivateChat(thread_node *node, Message *data)
 
     if (p == NULL)
     {
-        char arr[100] = {"该用户不在线"};
-        send(node->cfd, arr, strlen(arr), 0);
+        Message res;
+        res.body.response.res_type = 0;
+        strcpy(res.body.response.logs, "该用户不在线");
+        send(node->cfd, &res, sizeof(res), 0);
+
+        // char res[100] = {"该用户不在线"};
+        // send(node->cfd, res, strlen(res), 0);
     }
     else if (!data->body.private_chat_response.accepted)
     {
-        char arr[100] = {0};
-        char acc[8];
-        sprintf(arr, "%d,请求与你私聊", node->cfd);
-        send(p->cfd, arr, strlen(arr), 0);
+        // char private_list = {
+        //     rid = data.sid ,
+        //     req_time data.msg_time
+        // };
+        // data->header.sid private_list.
+        Message res;
+        time_t times;
+        struct tm *local_time;
+        res.body.response.res_type = 3;
+        strcpy(res.header.rid, data->header.sid);
+        strcpy(res.body.response.logs, "请求与你私聊");
+
+        time(&times);
+        local_time = localtime(&times);
+        strftime(res.header.msg_time, sizeof(res.header.msg_time), "%Y-%m-%d %H:%M:%S", local_time);
+
+        send(p->cfd, &res, sizeof(res), 0);
+
+        // char res[100] = {0};
+        // char acc[8];
+        // sprintf(res, "%d,请求与你私聊", node->cfd);
+        // send(p->cfd, res, strlen(res), 0);
         // recv(p->cfd, acc, strlen(acc), 0);
 
         // send(node->cfd, acc, strlen(acc), 0);

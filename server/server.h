@@ -70,9 +70,10 @@ typedef struct Message{
             char password[32];  // 客户端密码
         } login_request;
         
-        struct {  // 异常响应消息
-            bool status;  // 是否成功的信息
-        } login_response;
+        struct {  // 响应消息 
+            int res_type;  // 响应类型
+            char logs[64]; //日志
+        } response;
         
         struct {  // 文件传输消息
             char file_path[1024];  // 文件路径

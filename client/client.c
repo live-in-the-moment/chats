@@ -7,6 +7,8 @@ struct tm *local_time;
 char msg_time[1024];
 int sockfd;
 
+char private_res[16] = {"group_chat"};
+
 // 修改退出聊天软件的方式
 void Close(int signum)
 {
@@ -15,7 +17,6 @@ void Close(int signum)
 
 void private_chats(char* sendline, Message m){
     Message message;
-    // memset(&message, 0, sizeof(message));
     strcpy(message.header.sid, m.header.sid);
     strcpy(message.header.rid, m.header.rid);
     strcpy(message.header.msg_type, "PRIVATE");
@@ -111,7 +112,7 @@ void menu()
 // 读线程
 void *read_thread(void *arg)
 {
-    char receive[128];
+    Message response;
     int length;
 
     struct Message node;
@@ -120,47 +121,75 @@ void *read_thread(void *arg)
 
     while (1)
     {
-        memset(receive, 0, sizeof(receive));
-        length = recv(sockfd, receive, 100, 0);
-        printf("读到客户端发送的包....\n");
+        memset(&response, 0, sizeof(response));
+        length = recv(sockfd, &response, sizeof(response), 0);
+        printf("读到服务端发送的包....\n");
         if (length == 0)
         {
             pthread_exit(NULL);
         }
+        switch(response.body.response.res_type){
+            case 1:
 
-        receive[length] = '\0';
-        if (strcmp("AAAAA", receive) == 0)
-        {
-            printf("接收文件中....\n");
-            char buffer[1024];
-            memset(buffer, 0, sizeof(buffer));
-            int file_len = recv(sockfd, buffer, 1024, 0);
-            if (-1 == file_len)
-            {
-                perror("recv");
-                exit(-1);
-            }
-            printf("file_len = %d\n", file_len);
-            buffer[file_len] = '\0';
-            // printf("buffer = %s\n",buffer);
-            file_recv(buffer);
-            printf("接收文件成功\n");
-        }
-        else if (strstr(receive, "请求与你私聊") != NULL)
-        {
-            char acc[8];
-            printf("%s 请求私聊，是否同意【Y/n】\n", strtok(receive, ","));
-            // scanf("%s", acc);
-            // if (strcasecmp(acc, "Y") == 0)
-            // {
-            //     send(sockfd, &acc, sizeof(acc), 0);
-            // }
+                break;
+            case 2:
+                printf("%s", response.body.response.logs);
+                break;
+            case 3: 
+                printf("%s %s (%s)\n请在主菜单输入 3 查看\n", response.header.rid, response.body.response.logs, response.header.msg_time);
+                
+                break;
+            case 4:
+
+                break;
+            case 5:
+
+                break;
+            case 6:
+
+                break;
+            case 7: 
+
+                break;
+            default:
+                printf("%s\n", response.body.response.logs);
+                break;
             
         }
-        else
-        {
-            printf("%s\n", receive);
-        }
+
+        // receive[length] = '\0';
+        // if (strcmp("AAAAA", response.body.response.logs) == 0)
+        // {
+        //     printf("接收文件中....\n");
+        //     char buffer[1024];
+        //     memset(buffer, 0, sizeof(buffer));
+        //     int file_len = recv(sockfd, buffer, 1024, 0);
+        //     if (-1 == file_len)
+        //     {
+        //         perror("recv");
+        //         exit(-1);
+        //     }
+        //     printf("file_len = %d\n", file_len);
+        //     buffer[file_len] = '\0';
+        //     // printf("buffer = %s\n",buffer);
+        //     file_recv(buffer);
+        //     printf("接收文件成功\n");
+        // }
+        // else if (strstr(receive, "请求与你私聊") != NULL)
+        // {
+        //     char acc[8];
+        //     printf("%s 请求私聊，是否同意【Y/n】\n", strtok(receive, ","));
+        //     // scanf("%s", acc);
+        //     // if (strcasecmp(acc, "Y") == 0)
+        //     // {
+        //     //     send(sockfd, &acc, sizeof(acc), 0);
+        //     // }
+            
+        // }
+        // else
+        // {
+        //     printf("%s\n", response.body.response.logs);
+        // }
     }
     pthread_exit(NULL);
 }
@@ -176,7 +205,7 @@ void *write_thread(void *arg)
 
     while (1)
     {
-        system("clear");
+        // system("clear");
         menu();
         memset(&select, 0, sizeof(int));
         scanf("%d", &select);
@@ -215,19 +244,48 @@ void *write_thread(void *arg)
             sleep(1);
             send(sockfd, &message, sizeof(message), 0);
             sleep(2);
-            system("clear");
+            // system("clear");
             break;
         // 私聊
         case 3:
-            strcpy(message.header.msg_type, "PRIVATE");
-            printf("请输入对方的Id:\n");
-            scanf("%s", message.header.rid);
+            int op;
+            printf("1、查看私聊申请。\n2、发起私聊会话。\n");
+            scanf("%d", &op);
+            switch (op)
+            {
+            case 1:
+                printf("无私聊申请\n");
+                break;
+            
+            case 2:
+                strcpy(message.header.msg_type, "PRIVATE");
+                printf("请输入对方的Id:\n");
+                scanf("%s", message.header.rid);
 
-            message.body.private_chat_response.accepted = 0;
-            send(sockfd, &message, sizeof(message), 0);
-            printf("%d\n", message.body.private_chat_response.accepted);
-
-            private_chats(sendline, message);
+                message.body.private_chat_response.accepted = 0;
+                send(sockfd, &message, sizeof(message), 0);
+                printf("%s\n", "等待对方响应...\n");
+                
+                time_t start_time = time(NULL);
+                while (1)
+                {
+                    int timeout = 10;
+                    time_t current_time = time(NULL);
+                    if (strcmp(private_res, "true") == 0)
+                    {
+                        private_chats(sendline, message);
+                        break;
+                    }
+                    if (current_time - start_time > timeout)
+                    {
+                        printf("对方未理会你\n");
+                        break;
+                    }
+                    
+                    sleep(1);                
+                }
+                break;
+            }
             break;
 
         // 群聊
