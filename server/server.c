@@ -233,7 +233,7 @@ int FindSecret(sqlite3 *ppdb, Message *data)
 void UpdateData(sqlite3 *ppdb, Message *data)
 {
     char sq1[128] = {0};
-    sprintf(sq1, "update mytable set passwd='%s' where id= '%s'  ;", data->body.login_request.password, data->header.sid);
+    sprintf(sq1, "update mytable set password='%s' where sid= '%s'  ;", data->body.login_request.password, data->header.sid);
     char **result;
     int row, column;
     int flag = 0;
@@ -512,6 +512,17 @@ void MsgSendRecv(thread_node *node)
             else
                 PrintChatRecord(node->ppdb, node);
         }
+        // 查看私聊天记录
+        else if (strcmp(RecvInfo.header.msg_type, "LOOKPMCHATRECORD") == 0)
+        {
+            if (-1 == InspectOwnOnline(node))
+            {
+                char arr[128] = {"你未在线，不能查看私聊天记录，请先登录"};
+                send(node->cfd, arr, strlen(arr), 0);
+            }
+            else
+                PrintPmChatRecord(node->ppdb, node,RecvInfo.header.sid);
+        }
         // 传输文件
         else if (strcmp(RecvInfo.header.msg_type, "FILE") == 0)
         {
@@ -664,16 +675,9 @@ void PrivateChat(thread_node *node, Message *data)
         strcpy(res.body.response.logs, "该用户不在线");
         send(node->cfd, &res, sizeof(res), 0);
 
-        // char res[100] = {"该用户不在线"};
-        // send(node->cfd, res, strlen(res), 0);
     }
     else if (!data->body.private_chat_response.accepted)
     {
-        // char private_list = {
-        //     rid = data.sid ,
-        //     req_time data.msg_time
-        // };
-        // data->header.sid private_list.
         Message res;
         time_t times;
         struct tm *local_time;
@@ -686,21 +690,13 @@ void PrivateChat(thread_node *node, Message *data)
         strftime(res.header.msg_time, sizeof(res.header.msg_time), "%Y-%m-%d %H:%M:%S", local_time);
 
         send(p->cfd, &res, sizeof(res), 0);
-
-        // char res[100] = {0};
-        // char acc[8];
-        // sprintf(res, "%d,请求与你私聊", node->cfd);
-        // send(p->cfd, res, strlen(res), 0);
-        // recv(p->cfd, acc, strlen(acc), 0);
-
-        // send(node->cfd, acc, strlen(acc), 0);
-
         
     }
     else
     {
-        
+        char sid[12] = {0};
         char chat[2048] = {0};
+        strcpy(sid, data->header.sid);
         strcpy(chat, data->header.sid);
         strcat(chat, "(");
         strcat(chat, data->header.msg_time);
@@ -710,7 +706,7 @@ void PrivateChat(thread_node *node, Message *data)
 
         len = strlen(chat);
         send(p->cfd, chat, len, 0);
-        InsertChatData(node->ppdb, chat);
+        InsertPmChatData(node->ppdb, chat,sid);
     }
 }
 
@@ -786,6 +782,36 @@ void CreatTable2(sqlite3 *ppdb)
     }
 }
 
+// 创建第三张表用于保存私聊的记录
+void CreatTable3(sqlite3 *ppdb)
+{
+    // 创建表
+    char sql[128] = {0};
+    sprintf(sql, "create table if not exists pm_chat(sid char,chat char)");
+    int ret = sqlite3_exec(ppdb, sql, NULL, NULL, NULL);
+    if (ret != SQLITE_OK)
+    {
+        printf("sqlite3_exec:%s\n", sqlite3_errmsg(ppdb));
+        exit(-1);
+    }
+}
+
+// 向第三张表中插入聊天记录
+void InsertPmChatData(sqlite3 *ppdb, char *chat,char *sid)
+{
+    char str[2048];
+    char *sql = str;
+    char *errmsg = NULL;
+    sprintf(sql, "insert into pm_chat(sid,chat) values('%s','%s');",sid,chat);
+    if (SQLITE_OK != sqlite3_exec(ppdb, sql, NULL, NULL, &errmsg))
+    {
+        printf("insert record fail! %s \n", errmsg);
+        sqlite3_close(ppdb);
+        exit(-1);
+    }
+}
+
+
 // 向第二张表中插入聊天记录
 void InsertChatData(sqlite3 *ppdb, char *chat)
 {
@@ -802,13 +828,6 @@ void InsertChatData(sqlite3 *ppdb, char *chat)
         exit(-1);
     }
 
-    sprintf(sql, "insert into chat(chat) values('%s');", "\n");
-    if (SQLITE_OK != sqlite3_exec(ppdb, sql, NULL, NULL, &errmsg))
-    {
-        printf("insert record fail! %s \n", errmsg);
-        sqlite3_close(ppdb);
-        exit(-1);
-    }
 }
 
 // 遍历聊天记录
@@ -854,6 +873,48 @@ void PrintChatRecord(sqlite3 *ppdb, thread_node *node)
         return;
     }
 }
+
+// 遍历私聊天记录
+void PrintPmChatRecord(sqlite3 *ppdb, thread_node *node, char *sid)
+{
+    OnlineLinkList *head = NULL;
+    head = node->head;
+    OnlineLinkList *p = NULL;
+    p = head->next;
+    char sql[128] = {0};
+    sprintf(sql, "select pm_chat from pm_chat where sid= '%s' ;",sid);
+    char **result;
+    int row, column;
+    int ret = sqlite3_get_table(ppdb, sql, &result, &row, &column, NULL);
+    if (ret != SQLITE_OK)
+    {
+        printf("sqlite3_get_table: %s\n", sqlite3_errmsg(ppdb));
+        exit(-1);
+    }
+    int Index = column;
+    char chat[1000] = {0};
+    for (int i = 0; i < row; i++)
+    {
+        for (int j = 0; j < column; j++)
+        {
+            // 判断逻辑编写 拿到指定Id 的数据
+            strcpy(chat, result[Index]);
+            send(node->cfd, chat, strlen(chat), 0);
+            Index++;
+        }
+    }
+    if (row == 0) // 当聊天记录为0行的时候聊天记录为空
+    {
+        strcpy(chat, "当前还没有聊天记录");
+        send(node->cfd, chat, strlen(chat), 0);
+        return;
+    }
+    else
+    {
+        return;
+    }
+}
+
 
 //***************************************************
 // 线程池

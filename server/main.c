@@ -23,7 +23,9 @@ int main(int argc, char **argv)
     CreatTable(ppdb);
     //创建第二张表用于保存聊天记录
     CreatTable2(ppdb);
-
+    //创建第三张表用于保存私聊天记录
+    CreatTable3(ppdb);
+    
     //遍历用户注册信息
     Id(ppdb);
 

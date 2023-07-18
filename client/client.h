@@ -30,6 +30,7 @@ enum {
     PRIVATE,    //私聊
     GROUP,  //群聊
     LOOKCHATRECORD, //查看聊天记录
+    LOOKPMCHATRECORD, //查询私聊记录
     // FILE,   // 传输文件
 };
 

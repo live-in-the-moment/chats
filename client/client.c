@@ -20,24 +20,6 @@ void private_chats(char* sendline, Message m){
     strcpy(message.header.sid, m.header.sid);
     strcpy(message.header.rid, m.header.rid);
     strcpy(message.header.msg_type, "PRIVATE");
-    // message.body.private_chat_response.accepted = 1;
-    // while (1)
-    // {
-    //     char res[16];
-    //     if (recv(sockfd, res, sizeof(res), 0))
-    //     {
-    //         /* code */
-    //     }
-        
-    // }
-    // char res[16];
-    // recv(sockfd, res, sizeof(res), 0);
-    // if (strcasecmp(res, "Y") != 0)
-    // {
-    //     printf("对方拒绝了你的私聊申请！");
-    //     return;
-    // }
-    
     
     while (1)
     {
@@ -68,31 +50,6 @@ void private_chats(char* sendline, Message m){
     }
 }
 
-//  序列化并发送数据
-// int send_data(int sockfd,Message *message)
-// {
-//     char buf[1024];
-//     // char res[1024];
-//     // message->header.crc32 = calculate_crc32(message);
-//     memcpy(&message, &buf, sizeof(message));
-//     send(sockfd, &buf, sizeof(message), 0);
-//     return 0;
-// }
-
-//  重发
-// int retry(int sockfd,Message *message)
-// {
-//     for (size_t i = 0; i < 3; i++)
-//     {
-//         if (send_data(sockfd,message) != -1)
-//         {
-//             return 0;
-//         }
-//         printf("发送失败，正在进行第%ld次重发", i + 1);
-//         return -1;
-//     }
-
-// }
 
 // 聊天室 功能选择界面
 void menu()
@@ -103,9 +60,10 @@ void menu()
     printf("                          3.私聊                       \n\n");
     printf("                          4.群聊                       \n\n");
     printf("                          5.查看在线用户                 \n\n");
-    printf("                          6.查看聊天记录                 \n\n");
-    printf("                          7.文件传输                  \n\n");
-    printf("                          8.退出聊天室                 \n\n");
+    printf("                          6.查看群聊天记录                \n\n");
+    printf("                          7.查看私聊天记录                \n\n");
+    printf("                          8.文件传输                  \n\n");
+    printf("                          9.退出聊天室                 \n\n");
     printf("*********************************************************\n");
 }
 
@@ -267,23 +225,24 @@ void *write_thread(void *arg)
                 printf("%s\n", "等待对方响应...\n");
                 
                 time_t start_time = time(NULL);
-                while (1)
-                {
-                    int timeout = 10;
-                    time_t current_time = time(NULL);
-                    if (strcmp(private_res, "true") == 0)
-                    {
-                        private_chats(sendline, message);
-                        break;
-                    }
-                    if (current_time - start_time > timeout)
-                    {
-                        printf("对方未理会你\n");
-                        break;
-                    }
+                // while (1)
+                // {
+                //     int timeout = 10;
+                //     time_t current_time = time(NULL);
+                //     if (strcmp(private_res, "true") == 0)
+                //     {
+                //         private_chats(sendline, message);
+                //         break;
+                //     }
+                //     if (current_time - start_time > timeout)
+                //     {
+                //         printf("对方未理会你\n");
+                //         break;
+                //     }
                     
-                    sleep(1);                
-                }
+                //     sleep(1);                
+                // }
+                private_chats(sendline, message);
                 break;
             }
             break;
@@ -325,12 +284,20 @@ void *write_thread(void *arg)
             strcpy(message.header.msg_type, "LOOKCHATRECORD");
             send(sockfd, &message, sizeof(message), 0);
             break;
-        // 文件传输
+         // 查询私聊记录
         case 7:
+            printf("请输入需要查询记录的ID:\n");
+            scanf("%s", message.header.sid);
+            strcpy(message.header.msg_type, "LOOKPMCHATRECORD");
+            send(sockfd, &message, sizeof(message), 0);
+            sleep(3);
+            break;
+        // 文件传输
+        case 8:
             file_from(sockfd);
             break;
         // 退出聊天室
-        case 8:
+        case 9:
             system("clear");
             // sleep(1);
             printf("退出成功!\n");
