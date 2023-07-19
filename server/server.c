@@ -460,7 +460,6 @@ void MsgSendRecv(thread_node *node)
             {
                 strcpy(node->head->chat_status, RecvInfo.header.chat_status);
             }
-
             else
             {
                 PrivateChat(node, &RecvInfo);
@@ -639,7 +638,15 @@ void PrivateChat(thread_node *node, Message *data)
     {
 
         res.body.response.res_type = 2;
-        strcpy(res.body.response.logs, "私聊请求");
+        strcpy(res.header.chat_status, "private_true");
+        strcpy(res.body.response.logs, "对方接受私聊申请");
+        send(p->cfd, &res, sizeof(res), 0);
+    }
+    else if (strcmp(data->header.chat_status, "private_false") == 0)
+    {
+        res.body.response.res_type = 2;
+        strcpy(res.header.chat_status, "private_false");
+        strcpy(node->head->chat_status, "group_chat");
         send(p->cfd, &res, sizeof(res), 0);
     }
     else if (!data->body.private_chat_response.accepted)
@@ -861,6 +868,8 @@ void PrintPmChatRecord(sqlite3 *ppdb, thread_node *node, char *sid)
     head = node->head;
     OnlineLinkList *p = NULL;
     p = head->next;
+    Message res;
+    res.body.response.res_type = 7;
     char sql[128] = {0};
     sprintf(sql, "select * from pm_chat where sid= '%s' ;", sid);
     char **result;
@@ -872,21 +881,23 @@ void PrintPmChatRecord(sqlite3 *ppdb, thread_node *node, char *sid)
         exit(-1);
     }
     int Index = column;
-    char chat[1000] = {0};
+    // char chat[1000] = {0};
     for (int i = 0; i < row; i++)
     {
         for (int j = 0; j < column; j++)
         {
             // 判断逻辑编写 拿到指定Id 的数据
-            strcpy(chat, result[Index]);
-            send(node->cfd, chat, strlen(chat), 0);
+            // strcpy(chat, result[Index]);
+            strcpy(res.body.response.logs, result[Index]);
+            send(node->cfd, &res, sizeof(res), 0);
             Index++;
         }
     }
     if (row == 0) // 当聊天记录为0行的时候聊天记录为空
     {
-        strcpy(chat, "当前还没有聊天记录");
-        send(node->cfd, chat, strlen(chat), 0);
+        strcpy(res.body.response.logs, "当前还没有聊天记录");
+        send(node->cfd, &res, sizeof(res), 0);
+        // send(node->cfd, chat, strlen(chat), 0);
         return;
     }
     else

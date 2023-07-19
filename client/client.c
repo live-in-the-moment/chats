@@ -26,14 +26,15 @@ void private_chats(char *sendline, Message m)
 
     while (1)
     {
+
+        
         printf("请输入消息:\n");
         memset(sendline, 0, sizeof(sendline));
-        // fgets(sendline, 128, stdin);
         scanf("%s", sendline);
-
-        if (strncmp(sendline, "quit", 4) == 0)
+        
+        if (strcmp(chat_status, "group_chat") == 0)
         {
-            printf("退出私聊");
+            strcpy(chat_status, "group_chat");
             break;
         }
 
@@ -46,6 +47,14 @@ void private_chats(char *sendline, Message m)
         strcpy(message.header.sid, message.header.sid);
         strcpy(message.body.chat_message.content, sendline);
         strcpy(message.header.msg_time, msg_time);
+
+        if (strncmp(sendline, "quit", 4) == 0)
+        {
+            strcpy(message.header.chat_status, "private_false");
+            send(sockfd, &message, sizeof(message), 0);
+            break;
+        }
+
         // message.body.private_chat_response.accepted = false;
         printf("%d, %s, %s\n", message.body.private_chat_response.accepted, message.body.chat_message.content, sendline);
         int s = send(sockfd, &message, sizeof(message), 0);
@@ -101,9 +110,19 @@ void *read_thread(void *arg)
             printf("%s，欢迎%s\n", response.body.response.logs, mysid);
             break;
         case 2:
-            strcpy(chat_status, "private_true");
-            printf("对方接受私聊申请%s\n",response.body.response.logs);
-            break;
+            if (strcmp(response.header.chat_status, "private_true") == 0)
+            {
+                strcpy(chat_status, "private_true");
+                printf("%s\n",response.body.response.logs);
+                break;
+            }
+            if (strcmp(response.header.chat_status, "private_false") == 0)
+            {
+                strcpy(chat_status, "group_chat");
+                printf("对方已退出私聊，输入任意键返回主菜单\n");
+                strcpy(chat_status, "group_chat");
+                break;
+            }
         case 3:
     
             sprintf(private_item, "%s (%s)\n", response.header.rid, response.header.msg_time);
@@ -117,10 +136,10 @@ void *read_thread(void *arg)
             printf("%s\t%s\n", response.body.response.logs, response.header.sid);
             break;
         case 6:
-            printf("%s", response.body.response.logs);
+            printf("%s\n", response.body.response.logs);
             break;
         case 7:
-
+            printf("%s\n", response.body.response.logs);
             break;
         case 8:
             printf("接收文件中....\n");
@@ -261,7 +280,7 @@ void *write_thread(void *arg)
                 while (1)
                 {
                     printf("%s\n",chat_status);
-                    int timeout = 30;
+                    int timeout = 15;
                     time_t current_time = time(NULL);
                     if (strcmp(chat_status, "private_true") == 0)
                     {
@@ -273,7 +292,7 @@ void *write_thread(void *arg)
                         printf("对方未理会你\n");
                         
                         strcpy(message.header.chat_status, "group_chat");
-                        // strcpy(chat_status, "private_true");
+                        strcpy(chat_status, "group_chat");
                         send(sockfd, &message, sizeof(message), 0);
                         printf("%s\n", chat_status);
                         break;
@@ -295,7 +314,7 @@ void *write_thread(void *arg)
                 // fgets(sendline, sizeof(sendline), stdin);
                 if (strncmp(sendline, "quit", 4) == 0)
                 {
-                    printf("已退出群聊模式");
+                    printf("已退出群聊模式\n");
                     break;
                 }
                 // 获取当前时间
