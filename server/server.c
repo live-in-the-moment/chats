@@ -1,5 +1,7 @@
 #include "server.h"
 
+char private_list[64]; 
+
 // 创建一个空链表(保存在线用户)
 void CreateLink(OnlineLinkList **head)
 {
@@ -315,7 +317,8 @@ void Login(thread_node *node, Message *data)
         if (ret == -1)
         {
             Message res;
-            res.body.response.res_type = 0;
+            strcpy(res.header.sid, data->header.sid);
+            res.body.response.res_type = 1;
             strcpy(res.body.response.logs, "登录成功");
             send(data->header.cfd, &res, sizeof(res), 0);
 
@@ -460,10 +463,13 @@ void MsgSendRecv(thread_node *node)
                 strcpy(res.body.response.logs, "你未在线，不能私发消息，请先登录");
                 send(node->cfd, &res, sizeof(res), 0);
             }
-            // else if (RecvInfo.body.private_chat_response.accepted)
+            else if (strcmp(RecvInfo.header.chat_status, "group_chat") == 0)
+            {
+                strcpy(node->head->chat_status, RecvInfo.header.chat_status);
+            }
+            // else if (strcmp(RecvInfo.header.chat_status, "private_accept") == 0)
             // {
-            //     char res[128] = {"发送私聊请求成功"};
-            //     send(node->cfd, res, strlen(res), 0);
+            //     gdsgf
             // }
             else
             {
@@ -644,8 +650,15 @@ void PrivateChat(thread_node *node, Message *data)
         send(node->cfd, &res, sizeof(res), 0);
 
     }
+    else if (strcmp(data->header.chat_status, "private_accept") == 0)
+    {
+        Message res;
+        res.body.response.res_type = 2;
+        send(node->cfd, &data, sizeof(data), 0);
+    }
     else if (!data->body.private_chat_response.accepted)
     {
+        strcpy(node->head->chat_status, data->header.chat_status);
         Message res;
         time_t times;
         struct tm *local_time;
@@ -656,8 +669,9 @@ void PrivateChat(thread_node *node, Message *data)
         time(&times);
         local_time = localtime(&times);
         strftime(res.header.msg_time, sizeof(res.header.msg_time), "%Y-%m-%d %H:%M:%S", local_time);
-
         send(p->cfd, &res, sizeof(res), 0);
+
+        
         
     }
     else

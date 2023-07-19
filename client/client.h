@@ -46,6 +46,7 @@ typedef struct Message{
         int cfd;    // 聊天对象
         char msg_type[16];  // 消息类型
         char msg_time[32];  // 时间戳格式为YYYY-MM-DD HH:MM:SS
+        char chat_status[16]; //聊天状态
     } header;
     
     union {
@@ -73,7 +74,7 @@ typedef struct Message{
         } private_chat_response;
         
         struct {  // 聊天消息
-            char content[256];  // 聊天内容
+            char content[512];  // 聊天内容
         } chat_message;
         
         struct {  // 心跳消息

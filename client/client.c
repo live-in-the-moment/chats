@@ -6,7 +6,10 @@ struct tm *local_time;
 char msg_time[1024];
 int sockfd;
 
-char private_res[16] = {"group_chat"};
+char mysid[32];
+char chat_status[16] = {"group_chat"};
+char private_list[8][32];
+int private_items = sizeof(private_list) / sizeof(private_list[0]);
 
 // 修改退出聊天软件的方式
 void Close(int signum)
@@ -80,21 +83,33 @@ void *read_thread(void *arg)
     {
         memset(&response, 0, sizeof(response));
         length = recv(sockfd, &response, sizeof(response), 0);
-        printf("读到服务端发送的包....\n");
+        printf("%d 读到服务端发送的包 %d ....\n",response.body.response.res_type, length);
         if (length == 0)
         {
             pthread_exit(NULL);
         }
+        
+        if (response.header.msg_type)
+        {
+            /* code */
+        }
+        
         switch (response.body.response.res_type)
         {
         case 1:
-            printf("%s", response.body.response.logs);
+            strcpy(mysid, response.header.sid);
+            printf("%s，欢迎%s\n", response.body.response.logs, mysid);
             break;
         case 2:
-            printf("%s", response.body.response.logs);
+            strcpy(chat_status, "private_true");
+            printf("对方接受私聊申请\n");
             break;
         case 3:
-            printf("%s %s (%s)\n请在主菜单输入 3 查看\n", response.header.rid, response.body.response.logs, response.header.msg_time);
+            char private_item[32];
+            sprintf(private_item, "%s (%s)\n", response.header.rid, response.header.msg_time);
+            printf("%s %s 请在主菜单输入 3 查看\n", private_item, response.body.response.logs);
+            strcpy(private_list[private_items], private_item);
+            private_items ++;
             break;
         case 4:
             printf("%s", response.body.response.logs);
@@ -127,7 +142,7 @@ void *read_thread(void *arg)
         case 9:
             printf("%s", response.body.response.logs);
             break;
-        default:
+        case 0:
             printf("%s\n", response.body.response.logs);
             break;
         }
@@ -210,7 +225,28 @@ void *write_thread(void *arg)
             switch (op)
             {
             case 1:
-                printf("无私聊申请\n");
+                char user[32];
+                printf("************************\n");
+                for (int i = 0; i < private_items; i++) {
+                    printf("%s\n", private_list[i]);
+                }
+                printf("************************\n");
+                printf("请输入对应的用户名接受私聊，quit退出\n");
+                scanf("%s", user);
+                if (strncmp(user, "quit", 4) == 0)
+                {
+                    break;
+                }
+                Message req;
+                strcpy(req.header.sid, mysid);
+                strcpy(req.header.msg_type, "PRIVATE");
+                strcpy(message.header.chat_status, "private_accept");
+                strcpy(req.header.rid, user);
+                strcpy(chat_status, "private_accept");
+                send(sockfd, &req, sizeof(req), 0);
+
+                private_chats(sendline, req);
+                printf("私聊结束\n");
                 break;
 
             case 2:
@@ -219,28 +255,33 @@ void *write_thread(void *arg)
                 scanf("%s", message.header.rid);
 
                 message.body.private_chat_response.accepted = 0;
+                strcpy(message.header.chat_status, "private_true");
                 send(sockfd, &message, sizeof(message), 0);
                 printf("%s\n", "等待对方响应...\n");
 
                 time_t start_time = time(NULL);
-                // while (1)
-                // {
-                //     int timeout = 10;
-                //     time_t current_time = time(NULL);
-                //     if (strcmp(private_res, "true") == 0)
-                //     {
-                //         private_chats(sendline, message);
-                //         break;
-                //     }
-                //     if (current_time - start_time > timeout)
-                //     {
-                //         printf("对方未理会你\n");
-                //         break;
-                //     }
-
-                //     sleep(1);
-                // }
-                private_chats(sendline, message);
+                while (1)
+                {
+                    int timeout = 5;
+                    time_t current_time = time(NULL);
+                    if (strcmp(chat_status, "private_true") == 0)
+                    {
+                        private_chats(sendline, message);
+                        break;
+                    }
+                    if (current_time - start_time > timeout)
+                    {
+                        printf("对方未理会你\n");
+                        
+                        strcpy(message.header.chat_status, "group_chat");
+                        strcpy(chat_status, "private_true");
+                        send(sockfd, &message, sizeof(message), 0);
+                        printf("%s\n", chat_status);
+                        break;
+                    }
+                    sleep(1);
+                }
+                // private_chats(sendline, message);
                 break;
             }
             break;

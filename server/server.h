@@ -38,6 +38,7 @@ typedef struct OnlineLinkList
     char name[32];
     int cfd;    
     int forbid_flag;  
+    char chat_status[16]; //用户聊天状态
     struct OnlineLinkList *next; //指针域，为了能够操作后面结点
                                  //所以指针的类型为当前结构体的类型
 }OnlineLinkList;
@@ -63,6 +64,7 @@ typedef struct Message{
         int cfd;    // 聊天对象
         char msg_type[16];  // 消息类型
         char msg_time[32];  // 时间戳格式为YYYY-MM-DD HH:MM:SS
+        char chat_status[16]; //聊天状态
     } header;
     
     union {
@@ -90,7 +92,7 @@ typedef struct Message{
         } private_chat_response;
         
         struct {  // 聊天消息
-            char content[256];  // 聊天内容
+            char content[512];  // 聊天内容
         } chat_message;
         
         struct {  // 心跳消息
