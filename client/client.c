@@ -78,7 +78,7 @@ void *read_thread(void *arg)
     struct Message node;
     node = *((struct Message *)arg);
     sockfd = node.header.cfd;
-
+    char private_item[128];
     while (1)
     {
         memset(&response, 0, sizeof(response));
@@ -102,17 +102,16 @@ void *read_thread(void *arg)
             break;
         case 2:
             strcpy(chat_status, "private_true");
-            printf("对方接受私聊申请\n");
+            printf("对方接受私聊申请%s\n",response.body.response.logs);
             break;
         case 3:
-            char private_item[32];
+    
             sprintf(private_item, "%s (%s)\n", response.header.rid, response.header.msg_time);
             printf("%s %s 请在主菜单输入 3 查看\n", private_item, response.body.response.logs);
             strcpy(private_list[private_items], private_item);
             private_items ++;
             break;
         case 4:
-            printf("%s", response.body.response.logs);
             break;
         case 5:
             printf("%s\t%s\n", response.body.response.logs, response.header.sid);
@@ -121,10 +120,9 @@ void *read_thread(void *arg)
             printf("%s", response.body.response.logs);
             break;
         case 7:
-            printf("%s", response.body.response.logs);
+
             break;
         case 8:
-            printf("%s", response.body.response.logs);
             printf("接收文件中....\n");
             char buffer[1024];
             memset(buffer, 0, sizeof(buffer));
@@ -140,7 +138,6 @@ void *read_thread(void *arg)
             printf("接收文件成功\n");
             break;
         case 9:
-            printf("%s", response.body.response.logs);
             break;
         case 0:
             printf("%s\n", response.body.response.logs);
@@ -174,7 +171,7 @@ void *write_thread(void *arg)
     Message message;
     int select;
     sockfd = *((int *)arg);
-
+    char user[32];
     while (1)
     {
         // system("clear");
@@ -225,7 +222,7 @@ void *write_thread(void *arg)
             switch (op)
             {
             case 1:
-                char user[32];
+     
                 printf("************************\n");
                 for (int i = 0; i < private_items; i++) {
                     printf("%s\n", private_list[i]);
@@ -240,8 +237,9 @@ void *write_thread(void *arg)
                 Message req;
                 strcpy(req.header.sid, mysid);
                 strcpy(req.header.msg_type, "PRIVATE");
-                strcpy(message.header.chat_status, "private_accept");
+                strcpy(req.header.chat_status, "private_accept");
                 strcpy(req.header.rid, user);
+                req.body.private_chat_response.accepted = 1;
                 strcpy(chat_status, "private_accept");
                 send(sockfd, &req, sizeof(req), 0);
 
@@ -262,7 +260,8 @@ void *write_thread(void *arg)
                 time_t start_time = time(NULL);
                 while (1)
                 {
-                    int timeout = 5;
+                    printf("%s\n",chat_status);
+                    int timeout = 30;
                     time_t current_time = time(NULL);
                     if (strcmp(chat_status, "private_true") == 0)
                     {
@@ -274,7 +273,7 @@ void *write_thread(void *arg)
                         printf("对方未理会你\n");
                         
                         strcpy(message.header.chat_status, "group_chat");
-                        strcpy(chat_status, "private_true");
+                        // strcpy(chat_status, "private_true");
                         send(sockfd, &message, sizeof(message), 0);
                         printf("%s\n", chat_status);
                         break;
@@ -318,7 +317,7 @@ void *write_thread(void *arg)
             send(sockfd, &message, sizeof(message), 0);
             sleep(1);
             break;
-        // 查看聊天记录
+        // 查看群聊天记录
         case 6:
             strcpy(message.header.msg_type, "LOOKCHATRECORD");
             send(sockfd, &message, sizeof(message), 0);

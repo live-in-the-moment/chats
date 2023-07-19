@@ -75,7 +75,7 @@ typedef struct Message{
         
         struct {  // 响应消息 
             int res_type;  // 响应类型
-            char logs[64]; //日志
+            char logs[512]; //日志
         } response;
         
         struct {  // 文件传输消息
