@@ -485,8 +485,10 @@ void MsgSendRecv(thread_node *node)
         {
             if (-1 == InspectOwnOnline(node))
             {
-                char arr[128] = {"你未在线，不能查看私聊天记录，请先登录"};
-                send(node->cfd, arr, strlen(arr), 0);
+                Message res;
+                res.body.response.res_type = 0;
+                strcpy(res.body.response.logs, "你未在线，不能查看私聊天记录，请先登录");
+                send(node->cfd, &res, sizeof(res), 0);
             }
             else
                 PrintPmChatRecord(node->ppdb, node, RecvInfo.header.sid);
@@ -897,7 +899,6 @@ void PrintPmChatRecord(sqlite3 *ppdb, thread_node *node, char *sid)
     {
         strcpy(res.body.response.logs, "当前还没有聊天记录");
         send(node->cfd, &res, sizeof(res), 0);
-        // send(node->cfd, chat, strlen(chat), 0);
         return;
     }
     else

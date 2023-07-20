@@ -163,21 +163,6 @@ void *read_thread(void *arg)
             break;
         }
 
-        // else if (strstr(receive, "请求与你私聊") != NULL)
-        // {
-        //     char acc[8];
-        //     printf("%s 请求私聊，是否同意【Y/n】\n", strtok(receive, ","));
-        //     // scanf("%s", acc);
-        //     // if (strcasecmp(acc, "Y") == 0)
-        //     // {
-        //     //     send(sockfd, &acc, sizeof(acc), 0);
-        //     // }
-
-        // }
-        // else
-        // {
-        //     printf("%s\n", response.body.response.logs);
-        // }
     }
     pthread_exit(NULL);
 }
@@ -299,7 +284,6 @@ void *write_thread(void *arg)
                     }
                     sleep(1);
                 }
-                // private_chats(sendline, message);
                 break;
             }
             break;
