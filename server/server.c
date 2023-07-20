@@ -1,6 +1,6 @@
 #include "server.h"
 
-char private_list[64];
+char HeartbeatStatus[16] = {"ONLine"};
 
 // 创建一个空链表(保存在线用户)
 void CreateLink(OnlineLinkList **head)
@@ -331,6 +331,12 @@ void Login(thread_node *node, Message *data)
 
             // 头插法插入新的数据
             InsertNodeHead(head, new_node);
+
+            // 创建对应心跳线程处理
+            // CreateHeartbeat(node);
+            pthread_t tid;
+            pthread_create(&tid,NULL,(void*)CreateHeartbeat,(void*)node);
+            pthread_detach(tid);
         }
         else
         {
@@ -507,6 +513,17 @@ void MsgSendRecv(thread_node *node)
             else
                 FileRecv(node, &RecvInfo);
         }
+        // 心跳处理
+        else if (strcmp(RecvInfo.header.msg_type, "HEARTBEAT") == 0)
+        {
+            strcpy(HeartbeatStatus, "ONLine");
+        }
+        // 退出处理
+        else if (strcmp(RecvInfo.header.msg_type, "QUIT") == 0)
+        {
+            // 正常退出情况
+            QuitChat(node, &RecvInfo);
+        }
     }
 }
 
@@ -549,6 +566,7 @@ void FileRecv(thread_node *node, Message *data)
         Message res;
         res.body.response.res_type = 8;
         strcpy(res.body.response.logs, "服务端转发文件");
+        printf("服务端转发文件......\n");
         send(p->cfd, &res, sizeof(res), 0);
         usleep(30);
         // 向客户端发送文件
@@ -607,11 +625,53 @@ void GroupChat(sqlite3 *ppdb, OnlineLinkList *head, Message *data)
     while (p != NULL)
     {
         // 发给每一个客户端
-        len = strlen(chat);
         strcpy(res.body.response.logs, chat);
         send(p->cfd, &res, sizeof(res), 0);
         p = p->next;
     }
+}
+
+// 退出程序广播
+void QuitChat(thread_node *node, Message *data)
+{
+    OnlineLinkList *p = NULL;
+    p = node->head->next;
+    Message res;
+    res.body.response.res_type = 0;
+    while (p != NULL)
+    {
+        // 发给每一个客户端
+        strcpy(res.body.response.logs, data->header.sid);
+        strcat(res.body.response.logs, ": 已退出");
+        send(p->cfd, &res, sizeof(res), 0);
+        p = p->next;
+    }
+}
+
+// 心跳监听
+void CreateHeartbeat(thread_node *node)
+{
+    while (1)
+    {
+        int flag = InspectOwnOnline(node);
+        if (flag == 0)
+        {
+            Message res;
+            strcpy(res.header.msg_type, "HEARTBEAT");
+            strcpy(HeartbeatStatus, "OFFLine");
+            send(node->cfd, &res, sizeof(res), 0);
+        }
+        sleep(5);
+     
+        if (strcmp(HeartbeatStatus, "OFFLine") == 0)
+        {
+            Message res;
+            strcpy(res.header.sid, node->head->id);
+            QuitChat(node, &res);
+            break;
+        }
+    }
+    pthread_exit(NULL);
 }
 
 // 私聊

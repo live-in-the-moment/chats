@@ -31,6 +31,7 @@ enum {
     GROUP,  //群聊
     LOOKCHATRECORD, //查看聊天记录
     LOOKPMCHATRECORD, //查询私聊记录
+    QUIT, // 退出处理
     // FILE,   // 传输文件
 };
 

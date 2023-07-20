@@ -1,3 +1,6 @@
 {
-    "zenMode.hideLineNumbers": false
+    "zenMode.hideLineNumbers": false,
+    "files.associations": {
+        "server.h": "c"
+    }
 }

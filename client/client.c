@@ -17,6 +17,8 @@ void Close(int signum)
     printf("请正确退出\n");
 }
 
+
+
 void private_chats(char *sendline, Message m)
 {
     Message message;
@@ -27,16 +29,16 @@ void private_chats(char *sendline, Message m)
     while (1)
     {
 
-        
         printf("请输入消息:\n");
         memset(sendline, 0, sizeof(sendline));
         scanf("%s", sendline);
-        
+
         if (strcmp(chat_status, "group_chat") == 0)
         {
             strcpy(chat_status, "group_chat");
             break;
         }
+
 
         // 获取当前时间
         time(&times);
@@ -92,17 +94,19 @@ void *read_thread(void *arg)
     {
         memset(&response, 0, sizeof(response));
         length = recv(sockfd, &response, sizeof(response), 0);
-        printf("%d 读到服务端发送的包 %d ....\n",response.body.response.res_type, length);
+        printf("%d 读到服务端发送的包 %d ....\n", response.body.response.res_type, length);
         if (length == 0)
         {
             pthread_exit(NULL);
         }
-        
-        if (response.header.msg_type)
+
+        if (strcmp(response.header.msg_type,"HEARTBEAT") == 0) 
         {
-            /* code */
+            Message res;
+            strcpy(res.header.msg_type, "HEARTBEAT");
+            send(sockfd, &res, sizeof(res), 0);
         }
-        
+
         switch (response.body.response.res_type)
         {
         case 1:
@@ -113,7 +117,7 @@ void *read_thread(void *arg)
             if (strcmp(response.header.chat_status, "private_true") == 0)
             {
                 strcpy(chat_status, "private_true");
-                printf("%s\n",response.body.response.logs);
+                printf("%s\n", response.body.response.logs);
                 break;
             }
             if (strcmp(response.header.chat_status, "private_false") == 0)
@@ -124,11 +128,11 @@ void *read_thread(void *arg)
                 break;
             }
         case 3:
-    
+
             sprintf(private_item, "%s (%s)\n", response.header.rid, response.header.msg_time);
             printf("%s %s 请在主菜单输入 3 查看\n", private_item, response.body.response.logs);
             strcpy(private_list[private_items], private_item);
-            private_items ++;
+            private_items++;
             break;
         case 4:
             break;
@@ -162,7 +166,6 @@ void *read_thread(void *arg)
             printf("%s\n", response.body.response.logs);
             break;
         }
-
     }
     pthread_exit(NULL);
 }
@@ -226,9 +229,10 @@ void *write_thread(void *arg)
             switch (op)
             {
             case 1:
-     
+
                 printf("************************\n");
-                for (int i = 0; i < private_items; i++) {
+                for (int i = 0; i < private_items; i++)
+                {
                     printf("%s\n", private_list[i]);
                 }
                 printf("************************\n");
@@ -264,7 +268,7 @@ void *write_thread(void *arg)
                 time_t start_time = time(NULL);
                 while (1)
                 {
-                    printf("%s\n",chat_status);
+                    printf("%s\n", chat_status);
                     int timeout = 15;
                     time_t current_time = time(NULL);
                     if (strcmp(chat_status, "private_true") == 0)
@@ -275,7 +279,7 @@ void *write_thread(void *arg)
                     if (current_time - start_time > timeout)
                     {
                         printf("对方未理会你\n");
-                        
+
                         strcpy(message.header.chat_status, "group_chat");
                         strcpy(chat_status, "group_chat");
                         send(sockfd, &message, sizeof(message), 0);
@@ -343,6 +347,8 @@ void *write_thread(void *arg)
             // sleep(1);
             printf("退出成功!\n");
             printf("欢迎下次使用！\n");
+            strcpy(message.header.msg_type, "QUIT");
+            send(sockfd, &message, sizeof(message), 0);
             exit(-1);
             break;
         default:
@@ -374,7 +380,7 @@ void file_from(int sockfd)
     {
         perror("open error!\n");
         printf("没发现此文件\n");
-        exit(1);
+        // exit(1);
     }
 
     while (1)
@@ -386,7 +392,7 @@ void file_from(int sockfd)
         if ((bytes_read == -1))
         {
             perror("read error!\n");
-            exit(1);
+            // exit(1);
         }
         if (bytes_read == 0)
         {
