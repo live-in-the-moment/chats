@@ -91,11 +91,6 @@ void *read_thread(void *arg)
     {
         memset(&response, 0, sizeof(response));
         length = recv(sockfd, &response, sizeof(response), 0);
-        // if (length == -1)
-        // {
-        //     printf("连接失败请重试！！！");
-        //     exit(-1);
-        // }
         
         printf("%d 读到服务端发送的包 %d ....\n", response.body.response.res_type, length);
         if (length == 0)
@@ -227,9 +222,9 @@ void *write_thread(void *arg)
         // 私聊
         case 3:
             printf("1、查看私聊申请。\n2、发起私聊会话。\n");
-            int op;
-            scanf("%d", &op);
-            switch (op)
+            int operation;
+            scanf("%d", &operation);
+            switch (operation)
             {
             case 1:
 
