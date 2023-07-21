@@ -17,100 +17,7 @@
 #include <signal.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
-
-// 功能指令
-enum
-{
-    REG,              // 注册
-    LOGIN,            // 登录
-    FORGET,           // 忘记密码
-    LOOKUSERS,        // 查看在线用户
-    PRIVATE,          // 私聊
-    GROUP,            // 群聊
-    LOOKCHATRECORD,   // 查看聊天记录
-    LOOKPMCHATRECORD, // 查询私聊记录
-    QUIT,             // 退出处理
-    // FILE,   // 传输文件
-};
-
-// 在线用户链表
-typedef struct OnlineLinkList
-{
-    char id[128];
-    char name[32];
-    int cfd;
-    int forbid_flag;
-    char chat_status[16];        // 用户聊天状态
-    struct OnlineLinkList *next; // 指针域，为了能够操作后面结点
-                                 // 所以指针的类型为当前结构体的类型
-} OnlineLinkList;
-
-typedef struct thread_node
-{
-    int cfd;
-    OnlineLinkList *head;
-    sqlite3 *ppdb;
-} thread_node;
-
-// 保存信息的结构体
-typedef struct Message
-{
-    struct
-    {
-        uint8_t T;       //
-        uint32_t length; // 数据长度
-        uint32_t crc32;  // CRC校验
-        char sid[32];    // 账号
-        char rid[32];
-        // char sender[32];  // 发送者用户名
-        // char receiver[32];  // 接收者用户名
-        int cfd;              // 聊天对象
-        char msg_type[16];    // 消息类型
-        char msg_time[32];    // 时间戳格式为YYYY-MM-DD HH:MM:SS
-        char chat_status[16]; // 聊天状态
-    } header;
-
-    union
-    {
-        struct
-        { // 登录请求消息
-            // char username[32];  // 客户端用户名
-            char password[32]; // 客户端密码
-        } login_request;
-
-        struct
-        {                   // 响应消息
-            int res_type;   // 响应类型
-            char logs[512]; // 日志
-        } response;
-
-        struct
-        {                         // 文件传输消息
-            char file_path[1024]; // 文件路径
-        } file_transfer;
-
-        struct
-        {                             // 在线列表消息
-            int online_count;         // 当前在线客户端数量
-            char online_clients[256]; // 各个客户端的用户名
-        } online_list;
-
-        struct
-        {                 // 私聊响应消息
-            int accepted; // 是否同意私聊的状态
-        } private_chat_response;
-
-        struct
-        {                      // 聊天消息
-            char content[512]; // 聊天内容
-        } chat_message;
-
-        struct
-        {                       // 心跳消息
-            bool online_status; // 客户端在线状态
-        } heartbeat;
-    } body;
-} Message;
+#include "../head/protocol.h"
 
 // 创建一个空链表
 void CreateLink(OnlineLinkList **head);
@@ -145,7 +52,7 @@ void GroupChat(sqlite3 *ppdb, OnlineLinkList *head, Message *data);
 // 私聊
 void PrivateChat(thread_node *node, Message *data);
 // 退出程序
-void QuitChat(thread_node *node, Message *data);
+void AllChat(thread_node *node, Message *data,char *msg);
 // 心跳监听
 void CreateHeartbeat(thread_node *node);
 // 查看在线用户

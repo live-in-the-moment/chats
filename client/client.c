@@ -11,13 +11,13 @@ char chat_status[16] = {"group_chat"};
 char private_list[8][32];
 int private_items = sizeof(private_list) / sizeof(private_list[0]);
 
+
+
 // 修改退出聊天软件的方式
 void Close(int signum)
 {
     printf("请正确退出\n");
 }
-
-
 
 void private_chats(char *sendline, Message m)
 {
@@ -39,7 +39,6 @@ void private_chats(char *sendline, Message m)
             break;
         }
 
-
         // 获取当前时间
         time(&times);
         // 将时间转换为本地时间
@@ -57,10 +56,9 @@ void private_chats(char *sendline, Message m)
             break;
         }
 
-        // message.body.private_chat_response.accepted = false;
         printf("%d, %s, %s\n", message.body.private_chat_response.accepted, message.body.chat_message.content, sendline);
-        int s = send(sockfd, &message, sizeof(message), 0);
-        printf("%d\n%ld\n", s, sizeof(message));
+        int msg = send(sockfd, &message, sizeof(message), 0);
+        printf("%d\n%ld\n", msg, sizeof(message));
     }
 }
 
@@ -85,7 +83,6 @@ void *read_thread(void *arg)
 {
     Message response;
     int length;
-
     struct Message node;
     node = *((struct Message *)arg);
     sockfd = node.header.cfd;
@@ -94,13 +91,19 @@ void *read_thread(void *arg)
     {
         memset(&response, 0, sizeof(response));
         length = recv(sockfd, &response, sizeof(response), 0);
+        // if (length == -1)
+        // {
+        //     printf("连接失败请重试！！！");
+        //     exit(-1);
+        // }
+        
         printf("%d 读到服务端发送的包 %d ....\n", response.body.response.res_type, length);
         if (length == 0)
         {
             pthread_exit(NULL);
         }
 
-        if (strcmp(response.header.msg_type,"HEARTBEAT") == 0) 
+        if (strcmp(response.header.msg_type, "HEARTBEAT") == 0)
         {
             Message res;
             strcpy(res.header.msg_type, "HEARTBEAT");
@@ -111,7 +114,7 @@ void *read_thread(void *arg)
         {
         case 1:
             strcpy(mysid, response.header.sid);
-            printf("%s，欢迎%s\n", response.body.response.logs, mysid);
+            printf("%s, 欢迎%s\n", response.body.response.logs, mysid);
             break;
         case 2:
             if (strcmp(response.header.chat_status, "private_true") == 0)
@@ -236,7 +239,7 @@ void *write_thread(void *arg)
                     printf("%s\n", private_list[i]);
                 }
                 printf("************************\n");
-                printf("请输入对应的用户名接受私聊，quit退出\n");
+                printf("请输入对应的用户名接受私聊， quit退出\n");
                 scanf("%s", user);
                 if (strncmp(user, "quit", 4) == 0)
                 {
@@ -299,7 +302,6 @@ void *write_thread(void *arg)
                 printf("请输入消息:\n");
                 memset(sendline, 0, sizeof(sendline));
                 scanf("%s", sendline);
-                // fgets(sendline, sizeof(sendline), stdin);
                 if (strncmp(sendline, "quit", 4) == 0)
                 {
                     printf("已退出群聊模式\n");

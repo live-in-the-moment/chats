@@ -1,6 +1,13 @@
 {
     "zenMode.hideLineNumbers": false,
     "files.associations": {
-        "server.h": "c"
+        "server.h": "c",
+        "semaphore.h": "c",
+        "stdbool.h": "c",
+        "protocol.h": "c",
+        "sqlite3.h": "c",
+        "stdio.h": "c",
+        "unistd.h": "c",
+        "inet.h": "c"
     }
 }

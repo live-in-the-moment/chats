@@ -1,7 +1,5 @@
 #include "server.h"
 
-char HeartbeatStatus[16] = {"ONLine"};
-
 // 创建一个空链表(保存在线用户)
 void CreateLink(OnlineLinkList **head)
 {
@@ -82,7 +80,6 @@ void *MyFun(void *arg)
 
     // 关闭当前通信接口
     close(node.cfd);
-
     return NULL;
 }
 
@@ -257,21 +254,21 @@ int RepeatLogin(thread_node *node, Message *data)
 {
     OnlineLinkList *head = NULL;
     head = node->head;
-    OnlineLinkList *p = NULL;
-    p = head->next;
+    OnlineLinkList *p_links = NULL;
+    p_links = head->next;
 
-    if (p == NULL)
+    if (p_links == NULL)
     {
         // 无用户在线
         return 0;
     }
 
-    while (p != NULL && strcmp(p->id, data->header.sid) != 0)
+    while (p_links != NULL && strcmp(p_links->id, data->header.sid) != 0)
     {
-        p = p->next;
+        p_links = p_links->next;
     }
 
-    if (p == NULL)
+    if (p_links == NULL)
     {
         // 该id不在线
         return 0;
@@ -332,10 +329,13 @@ void Login(thread_node *node, Message *data)
             // 头插法插入新的数据
             InsertNodeHead(head, new_node);
 
+            // 广播给所有已经登录的用户
+            AllChat(node, &res, "已登录");
+
             // 创建对应心跳线程处理
-            // CreateHeartbeat(node);
+            strcpy(node->head->HeartbeatStatus, "ONLine");
             pthread_t tid;
-            pthread_create(&tid,NULL,(void*)CreateHeartbeat,(void*)node);
+            pthread_create(&tid, NULL, (void *)CreateHeartbeat, (void *)node);
             pthread_detach(tid);
         }
         else
@@ -403,7 +403,7 @@ void MsgSendRecv(thread_node *node)
     char buf[1024];
     Message RecvInfo;
     ret = recv(node->cfd, &RecvInfo, sizeof(RecvInfo), 0);
-
+    
     if (ret == 0)
     {
         DeleteNode(node);
@@ -516,13 +516,13 @@ void MsgSendRecv(thread_node *node)
         // 心跳处理
         else if (strcmp(RecvInfo.header.msg_type, "HEARTBEAT") == 0)
         {
-            strcpy(HeartbeatStatus, "ONLine");
+            strcpy(node->head->HeartbeatStatus, "ONLine");
         }
         // 退出处理
         else if (strcmp(RecvInfo.header.msg_type, "QUIT") == 0)
         {
             // 正常退出情况
-            QuitChat(node, &RecvInfo);
+            AllChat(node, &RecvInfo, "已退出");
         }
     }
 }
@@ -540,19 +540,19 @@ void FileRecv(thread_node *node, Message *data)
 
     int len;
 
-    OnlineLinkList *p = NULL;
+    OnlineLinkList *p_links = NULL;
 
-    p = node->head->next;
+    p_links = node->head->next;
 
     // 寻找在线用户链表中的cfd与私聊的cfd是否一致
-    while (p != NULL && strcmp(p->id, data->header.sid) != 0)
+    while (p_links != NULL && strcmp(p_links->id, data->header.sid) != 0)
     {
-        // printf("****%s\n",p->id);
-        p = p->next;
+        // printf("****%s\n",p_links->id);
+        p_links = p_links->next;
     }
 
     // 判断是否在线
-    if (p == NULL)
+    if (p_links == NULL)
     {
         Message res;
         res.body.response.res_type = 0;
@@ -567,10 +567,10 @@ void FileRecv(thread_node *node, Message *data)
         res.body.response.res_type = 8;
         strcpy(res.body.response.logs, "服务端转发文件");
         printf("服务端转发文件......\n");
-        send(p->cfd, &res, sizeof(res), 0);
+        send(p_links->cfd, &res, sizeof(res), 0);
         usleep(30);
         // 向客户端发送文件
-        send(p->cfd, data->body.file_transfer.file_path, strlen(data->body.file_transfer.file_path), 0);
+        send(p_links->cfd, data->body.file_transfer.file_path, strlen(data->body.file_transfer.file_path), 0);
     }
 }
 
@@ -606,8 +606,8 @@ void GroupChat(sqlite3 *ppdb, OnlineLinkList *head, Message *data)
 {
 
     int length;
-    OnlineLinkList *p = NULL;
-    p = head->next;
+    OnlineLinkList *p_links = NULL;
+    p_links = head->next;
     length = strlen(data->body.chat_message.content);
     int len;
     Message res;
@@ -622,29 +622,30 @@ void GroupChat(sqlite3 *ppdb, OnlineLinkList *head, Message *data)
     InsertChatData(ppdb, chat);
 
     res.body.response.res_type = 0;
-    while (p != NULL)
+    while (p_links != NULL)
     {
         // 发给每一个客户端
         strcpy(res.body.response.logs, chat);
-        send(p->cfd, &res, sizeof(res), 0);
-        p = p->next;
+        send(p_links->cfd, &res, sizeof(res), 0);
+        p_links = p_links->next;
     }
 }
 
-// 退出程序广播
-void QuitChat(thread_node *node, Message *data)
+// 程序广播
+void AllChat(thread_node *node, Message *data, char *msg)
 {
-    OnlineLinkList *p = NULL;
-    p = node->head->next;
+    OnlineLinkList *p_links = NULL;
+    p_links = node->head->next;
     Message res;
     res.body.response.res_type = 0;
-    while (p != NULL)
+    while (p_links != NULL)
     {
         // 发给每一个客户端
         strcpy(res.body.response.logs, data->header.sid);
-        strcat(res.body.response.logs, ": 已退出");
-        send(p->cfd, &res, sizeof(res), 0);
-        p = p->next;
+        strcat(res.body.response.logs, ": ");
+        strcat(res.body.response.logs, msg);
+        send(p_links->cfd, &res, sizeof(res), 0);
+        p_links = p_links->next;
     }
 }
 
@@ -658,16 +659,16 @@ void CreateHeartbeat(thread_node *node)
         {
             Message res;
             strcpy(res.header.msg_type, "HEARTBEAT");
-            strcpy(HeartbeatStatus, "OFFLine");
+            strcpy(node->head->HeartbeatStatus, "OFFLine");
             send(node->cfd, &res, sizeof(res), 0);
         }
-        sleep(5);
-     
-        if (strcmp(HeartbeatStatus, "OFFLine") == 0)
+        sleep(10);
+
+        if (strcmp(node->head->HeartbeatStatus, "OFFLine") == 0)
         {
             Message res;
             strcpy(res.header.sid, node->head->id);
-            QuitChat(node, &res);
+            AllChat(node, &res, "已退出");
             break;
         }
     }
@@ -678,18 +679,18 @@ void CreateHeartbeat(thread_node *node)
 void PrivateChat(thread_node *node, Message *data)
 {
     int length;
-    OnlineLinkList *p = NULL;
-    p = node->head->next;
+    OnlineLinkList *p_links = NULL;
+    p_links = node->head->next;
     Message res;
     length = strlen(data->body.chat_message.content);
     int len;
     // 寻找在线用户链表中的cfd与私聊中的cfd是否一致
-    while (p != NULL && strcmp(p->id, data->header.rid) != 0)
+    while (p_links != NULL && strcmp(p_links->id, data->header.rid) != 0)
     {
-        p = p->next;
+        p_links = p_links->next;
     }
 
-    if (p == NULL)
+    if (p_links == NULL)
     {
 
         res.body.response.res_type = 0;
@@ -702,14 +703,14 @@ void PrivateChat(thread_node *node, Message *data)
         res.body.response.res_type = 2;
         strcpy(res.header.chat_status, "private_true");
         strcpy(res.body.response.logs, "对方接受私聊申请");
-        send(p->cfd, &res, sizeof(res), 0);
+        send(p_links->cfd, &res, sizeof(res), 0);
     }
     else if (strcmp(data->header.chat_status, "private_false") == 0)
     {
         res.body.response.res_type = 2;
         strcpy(res.header.chat_status, "private_false");
         strcpy(node->head->chat_status, "group_chat");
-        send(p->cfd, &res, sizeof(res), 0);
+        send(p_links->cfd, &res, sizeof(res), 0);
     }
     else if (!data->body.private_chat_response.accepted)
     {
@@ -723,7 +724,7 @@ void PrivateChat(thread_node *node, Message *data)
         time(&times);
         local_time = localtime(&times);
         strftime(res.header.msg_time, sizeof(res.header.msg_time), "%Y-%m-%d %H:%M:%S", local_time);
-        send(p->cfd, &res, sizeof(res), 0);
+        send(p_links->cfd, &res, sizeof(res), 0);
     }
     else
     {
@@ -740,7 +741,7 @@ void PrivateChat(thread_node *node, Message *data)
         strcat(chat, data->body.chat_message.content);
         len = strlen(chat);
         strcpy(res.body.response.logs, chat);
-        send(p->cfd, &res, sizeof(res), 0);
+        send(p_links->cfd, &res, sizeof(res), 0);
 
         InsertPmChatData(node->ppdb, chat, sid);
     }
@@ -751,28 +752,25 @@ int LookOnlineUsers(thread_node *node)
 {
     OnlineLinkList *head = NULL;
     head = node->head;
-    OnlineLinkList *p = NULL;
-    p = head->next;
-
-    char bb[128];
-
+    OnlineLinkList *p_links = NULL;
+    p_links = head->next;
     Message res;
 
-    if (p == NULL)
+    if (p_links == NULL)
     {
         res.body.response.res_type = 0;
         strcpy(res.body.response.logs, "当前无用户在线");
         send(node->cfd, &res, sizeof(res), 0);
     }
 
-    while (p != NULL)
+    while (p_links != NULL)
     {
 
         res.body.response.res_type = 5;
         strcpy(res.body.response.logs, "在线用户: ");
-        strcpy(res.header.sid, p->id);
+        strcpy(res.header.sid, p_links->id);
         send(node->cfd, &res, sizeof(res), 0);
-        p = p->next;
+        p_links = p_links->next;
         usleep(4);
     }
 
@@ -784,21 +782,21 @@ int InspectOwnOnline(thread_node *node)
 {
     OnlineLinkList *head = NULL;
     head = node->head;
-    OnlineLinkList *p = NULL;
-    p = head->next;
+    OnlineLinkList *p_links = NULL;
+    p_links = head->next;
 
-    if (p == NULL)
+    if (p_links == NULL)
     {
         // 无用户在线
         return -1;
     }
 
-    while (p != NULL && p->cfd != node->cfd)
+    while (p_links != NULL && p_links->cfd != node->cfd)
     {
-        p = p->next;
+        p_links = p_links->next;
     }
 
-    if (p == NULL)
+    if (p_links == NULL)
     {
         // 自己不在线
         return -1;
@@ -875,14 +873,10 @@ void PrintChatRecord(sqlite3 *ppdb, thread_node *node)
 {
     OnlineLinkList *head = NULL;
     head = node->head;
-    OnlineLinkList *p = NULL;
-    p = head->next;
+    OnlineLinkList *p_links = NULL;
+    p_links = head->next;
     Message res;
     res.body.response.res_type = 6;
-
-    // strcpy(res.body.response.logs, "在线用户: ");
-    // strcpy(res.header.sid, p->id);
-    // send(node->cfd, &res, sizeof(res), 0);
 
     char sql[128] = {0};
     sprintf(sql, "select * from chat");
@@ -904,7 +898,6 @@ void PrintChatRecord(sqlite3 *ppdb, thread_node *node)
         for (int j = 0; j < column; j++)
         {
             strcpy(chat, result[Index]);
-            // strcpy(res.body.chat_message.content,chat);
             strcpy(res.body.response.logs, chat);
             send(node->cfd, &res, sizeof(res), 0);
             Index++;
@@ -928,8 +921,8 @@ void PrintPmChatRecord(sqlite3 *ppdb, thread_node *node, char *sid)
 {
     OnlineLinkList *head = NULL;
     head = node->head;
-    OnlineLinkList *p = NULL;
-    p = head->next;
+    OnlineLinkList *p_links = NULL;
+    p_links = head->next;
     Message res;
     res.body.response.res_type = 7;
     char sql[128] = {0};
@@ -943,13 +936,11 @@ void PrintPmChatRecord(sqlite3 *ppdb, thread_node *node, char *sid)
         exit(-1);
     }
     int Index = column;
-    // char chat[1000] = {0};
     for (int i = 0; i < row; i++)
     {
         for (int j = 0; j < column; j++)
         {
             // 判断逻辑编写 拿到指定Id 的数据
-            // strcpy(chat, result[Index]);
             strcpy(res.body.response.logs, result[Index]);
             send(node->cfd, &res, sizeof(res), 0);
             Index++;
