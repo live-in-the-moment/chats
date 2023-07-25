@@ -87,7 +87,7 @@ void *MyFun(void *arg)
 int FindId(sqlite3 *ppdb, Message *data)
 {
     char sq1[128] = {0};
-    sprintf(sq1, "select *from mytable;");
+    sprintf(sq1, "select * from mytable;");
     char **result;
     int row, column;
     int flag = 0;
@@ -331,12 +331,6 @@ void Login(thread_node *node, Message *data)
 
             // 广播给所有已经登录的用户
             AllChat(node, &res, "已登录");
-
-            // 创建对应心跳线程处理
-            strcpy(node->head->HeartbeatStatus, "ONLine");
-            pthread_t tid;
-            pthread_create(&tid, NULL, (void *)CreateHeartbeat, (void *)node);
-            pthread_detach(tid);
         }
         else
         {
@@ -513,11 +507,7 @@ void MsgSendRecv(thread_node *node)
             else
                 FileRecv(node, &RecvInfo);
         }
-        // 心跳处理
-        else if (strcmp(RecvInfo.header.msg_type, "HEARTBEAT") == 0)
-        {
-            strcpy(node->head->HeartbeatStatus, "ONLine");
-        }
+
         // 退出处理
         else if (strcmp(RecvInfo.header.msg_type, "QUIT") == 0)
         {
@@ -647,32 +637,6 @@ void AllChat(thread_node *node, Message *data, char *msg)
         send(p_links->cfd, &res, sizeof(res), 0);
         p_links = p_links->next;
     }
-}
-
-// 心跳监听
-void CreateHeartbeat(thread_node *node)
-{
-    while (1)
-    {
-        int flag = InspectOwnOnline(node);
-        if (flag == 0)
-        {
-            Message res;
-            strcpy(res.header.msg_type, "HEARTBEAT");
-            strcpy(node->head->HeartbeatStatus, "OFFLine");
-            send(node->cfd, &res, sizeof(res), 0);
-        }
-        sleep(10);
-
-        if (strcmp(node->head->HeartbeatStatus, "OFFLine") == 0)
-        {
-            Message res;
-            strcpy(res.header.sid, node->head->id);
-            AllChat(node, &res, "已退出");
-            break;
-        }
-    }
-    pthread_exit(NULL);
 }
 
 // 私聊

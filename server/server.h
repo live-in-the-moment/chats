@@ -53,8 +53,6 @@ void GroupChat(sqlite3 *ppdb, OnlineLinkList *head, Message *data);
 void PrivateChat(thread_node *node, Message *data);
 // 退出程序
 void AllChat(thread_node *node, Message *data,char *msg);
-// 心跳监听
-void CreateHeartbeat(thread_node *node);
 // 查看在线用户
 int LookOnlineUsers(thread_node *node);
 // 检查自己是否在线

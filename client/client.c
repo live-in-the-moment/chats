@@ -11,17 +11,16 @@ char chat_status[16] = {"group_chat"};
 char private_list[8][32];
 int private_items = sizeof(private_list) / sizeof(private_list[0]);
 
-
-
 // 修改退出聊天软件的方式
 void Close(int signum)
 {
     printf("请正确退出\n");
 }
 
-void private_chats(char *sendline, Message m)
+void private_chats(Message m)
 {
     Message message;
+    char sendline[512];
     strcpy(message.header.sid, m.header.sid);
     strcpy(message.header.rid, m.header.rid);
     strcpy(message.header.msg_type, "PRIVATE");
@@ -31,7 +30,9 @@ void private_chats(char *sendline, Message m)
 
         printf("请输入消息:\n");
         memset(sendline, 0, sizeof(sendline));
-        scanf("%s", sendline);
+
+        fgets(sendline,sizeof(sendline),stdin);
+        sendline[strcspn(sendline,"\n")] = '\0';
 
         if (strcmp(chat_status, "group_chat") == 0)
         {
@@ -46,7 +47,7 @@ void private_chats(char *sendline, Message m)
         // 格式化时间字符串
         strftime(msg_time, sizeof(msg_time), "%Y-%m-%d %H:%M:%S", local_time);
         strcpy(message.header.sid, message.header.sid);
-        strcpy(message.body.chat_message.content, sendline);
+        strcpy(message.body.chat_message.content,sendline);
         strcpy(message.header.msg_time, msg_time);
 
         if (strncmp(sendline, "quit", 4) == 0)
@@ -55,10 +56,8 @@ void private_chats(char *sendline, Message m)
             send(sockfd, &message, sizeof(message), 0);
             break;
         }
-
-        printf("%d, %s, %s\n", message.body.private_chat_response.accepted, message.body.chat_message.content, sendline);
-        int msg = send(sockfd, &message, sizeof(message), 0);
-        printf("%d\n%ld\n", msg, sizeof(message));
+        send(sockfd, &message, sizeof(message), 0);
+        memset(message.body.chat_message.content, 0, sizeof(message.body.chat_message.content));
     }
 }
 
@@ -91,18 +90,11 @@ void *read_thread(void *arg)
     {
         memset(&response, 0, sizeof(response));
         length = recv(sockfd, &response, sizeof(response), 0);
-        
+
         printf("%d 读到服务端发送的包 %d ....\n", response.body.response.res_type, length);
         if (length == 0)
         {
             pthread_exit(NULL);
-        }
-
-        if (strcmp(response.header.msg_type, "HEARTBEAT") == 0)
-        {
-            Message res;
-            strcpy(res.header.msg_type, "HEARTBEAT");
-            send(sockfd, &res, sizeof(res), 0);
         }
 
         switch (response.body.response.res_type)
@@ -173,10 +165,19 @@ void *write_thread(void *arg)
 {
 
     char sendline[1024];
+    // 接受消息体
     Message message;
+    // 响应信息体
+    Message req;
+    // 菜单选择器
     int select;
     sockfd = *((int *)arg);
+    // 私聊请求列表
     char user[32];
+    // 私聊请求等待时间
+    int timeout = 15;
+    // 私聊 请求开始时间 ，与计算已等待时间
+    time_t start_time,current_time;
     while (1)
     {
         // system("clear");
@@ -200,7 +201,6 @@ void *write_thread(void *arg)
             printf("正在登录，请稍后......\n");
             sleep(1);
             send(sockfd, &message, sizeof(message), 0);
-
             sleep(2);
             system("clear");
             break;
@@ -222,9 +222,9 @@ void *write_thread(void *arg)
         // 私聊
         case 3:
             printf("1、查看私聊申请。\n2、发起私聊会话。\n");
-            int operation;
-            scanf("%d", &operation);
-            switch (operation)
+          
+            scanf("%d", &select);
+            switch (select)
             {
             case 1:
 
@@ -240,7 +240,7 @@ void *write_thread(void *arg)
                 {
                     break;
                 }
-                Message req;
+
                 strcpy(req.header.sid, mysid);
                 strcpy(req.header.msg_type, "PRIVATE");
                 strcpy(req.header.chat_status, "private_accept");
@@ -249,7 +249,7 @@ void *write_thread(void *arg)
                 strcpy(chat_status, "private_accept");
                 send(sockfd, &req, sizeof(req), 0);
 
-                private_chats(sendline, req);
+                private_chats(req);
                 printf("私聊结束\n");
                 break;
 
@@ -263,15 +263,15 @@ void *write_thread(void *arg)
                 send(sockfd, &message, sizeof(message), 0);
                 printf("%s\n", "等待对方响应...\n");
 
-                time_t start_time = time(NULL);
+                start_time = time(NULL);
                 while (1)
                 {
                     printf("%s\n", chat_status);
-                    int timeout = 15;
-                    time_t current_time = time(NULL);
+
+                    current_time = time(NULL);
                     if (strcmp(chat_status, "private_true") == 0)
                     {
-                        private_chats(sendline, message);
+                        private_chats(message);
                         break;
                     }
                     if (current_time - start_time > timeout)
@@ -296,7 +296,9 @@ void *write_thread(void *arg)
             {
                 printf("请输入消息:\n");
                 memset(sendline, 0, sizeof(sendline));
-                scanf("%s", sendline);
+                // scanf("%s", sendline);
+                fgets(sendline,sizeof(sendline),stdin);
+                sendline[strcspn(sendline,"\n")] = '\0';
                 if (strncmp(sendline, "quit", 4) == 0)
                 {
                     printf("已退出群聊模式\n");
@@ -360,7 +362,6 @@ void file_from(int sockfd)
 
     char sendline[100];
     struct Message msg_text;
-
     int from_fd;
     int bytes_read;
     char *from_ptr;

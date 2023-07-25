@@ -5,7 +5,7 @@
 -- 查询表所有数据
 -- select * from mytable; 
 -- select * from chat;
--- select * from pm_chat;
+select * from pm_chat;
 -- 清空表数据
 -- delete from pm_chat; 
 -- 删除表

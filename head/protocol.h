@@ -18,7 +18,6 @@ enum
     LOOKCHATRECORD,   // 查看聊天记录
     LOOKPMCHATRECORD, // 查询私聊记录
     QUIT,             // 退出处理
-    HEARTBEAT,  //心跳监听
     // FILE,   // 传输文件
 };
 
@@ -28,12 +27,12 @@ typedef struct OnlineLinkList
     char id[128];
     char name[32];
     int cfd;
-    char HeartbeatStatus[16];   // 心跳监听状态
     int forbid_flag;
     char chat_status[16];        // 用户聊天状态
     struct OnlineLinkList *next; // 指针域，为了能够操作后面结点
                                  // 所以指针的类型为当前结构体的类型
 } OnlineLinkList;
+
 
 typedef struct thread_node
 {
@@ -91,10 +90,6 @@ typedef struct Message
             char content[512]; // 聊天内容
         } chat_message;
 
-        struct
-        {                       // 心跳消息
-            bool online_status; // 客户端在线状态
-        } heartbeat;
     } body;
 } Message;
 
